@@ -5,7 +5,7 @@ import java.awt.image.BufferedImage;
 /**
  * @author Phillip
  */
-interface ImageSource {
+public interface ImageSource {
 
     public BufferedImage getCurrentImage();
 
