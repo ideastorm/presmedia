@@ -9,7 +9,7 @@ I'll also need the following:
 * gradient image source
 * video file image source
 * audio support
-  * Looking into ffmpeg bindings
+  * Looking into ffmpeg bindings (xuggler)
 * ability to save named filter graphs and use them as presets/templates
 * Video playback should have full controls on the control view, but not on the presentation view.
   * Maybe have the controls on the video preview window, so that we could have multiple videos in an overlay filter without dealing with controls on the overlay view.
