@@ -1,5 +1,6 @@
-package com.ideastormsoftware.presmedia;
+package com.ideastormsoftware.presmedia.filters;
 
+import com.ideastormsoftware.presmedia.sources.ImageSource;
 import java.util.Arrays;
 import java.util.List;
 

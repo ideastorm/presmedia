@@ -11,13 +11,13 @@ import org.opencv.imgproc.Imgproc;
  */
 public final class ImageUtils {
 
-    static BufferedImage copy(BufferedImage img) {
+    public static BufferedImage copy(BufferedImage img) {
         BufferedImage copy = new BufferedImage(img.getWidth(), img.getHeight(), img.getType());
         copy.getGraphics().drawImage(img, 0, 0, null);
         return copy;
     }
 
-    static BufferedImage convertToImage(Mat mat) {
+    public static BufferedImage convertToImage(Mat mat) {
         int bufferedImageType = BufferedImage.TYPE_BYTE_GRAY;
         if (mat.channels() > 1) {
             Mat rgbMat = new Mat();
@@ -32,7 +32,7 @@ public final class ImageUtils {
         return image;
     }
 
-    static Size aspectScaledSize(int sourceWidth, int sourceHeight, int destWidth, int destHeight) {
+    public static Size aspectScaledSize(int sourceWidth, int sourceHeight, int destWidth, int destHeight) {
         double sourceRatio = 1.0 * sourceHeight / sourceWidth;
         double destRatio = 1.0 * destHeight / destWidth;
         if (destRatio > sourceRatio) //dest is narrower than source
@@ -43,7 +43,7 @@ public final class ImageUtils {
         }
     }
 
-    static BufferedImage copyScaled(BufferedImage img, int width, int height) {
+    public static BufferedImage copyScaled(BufferedImage img, int width, int height) {
         BufferedImage copy = new BufferedImage(width, height, img.getType());
         copy.getGraphics().drawImage(img, 0, 0, width, height, null);
         return copy;

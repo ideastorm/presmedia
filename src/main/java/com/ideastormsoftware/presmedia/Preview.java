@@ -1,5 +1,6 @@
 package com.ideastormsoftware.presmedia;
 
+import com.ideastormsoftware.presmedia.sources.ImageSource;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.HeadlessException;
@@ -19,12 +20,12 @@ import org.opencv.core.Size;
  */
 class Preview extends JFrame {
 
-    private final ImageSource source;
+    private ImageSource source;
     private final Timer timer;
     private Insets insets;
 
     public Preview(String title, ImageSource source) throws HeadlessException {
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setTitle(title);
         setBackground(Color.black);
         setSize(320, 240);
@@ -68,6 +69,10 @@ class Preview extends JFrame {
 
     int getClientHeight() {
         return getHeight() - insets.top - insets.bottom;
+    }
+    
+    public void setSource(ImageSource source) {
+        this.source = source;
     }
 
     @Override
