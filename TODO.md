@@ -14,3 +14,5 @@ I'll also need the following:
 * Video playback should have full controls on the control view, but not on the presentation view.
   * Maybe have the controls on the video preview window, so that we could have multiple videos in an overlay filter without dealing with controls on the overlay view.
 * fade in/out filter
+* video playback should be cued up and ready to play.  it should not lag between selecting the source and the start of playback.
+* should be able to define transitions between sources (none, fade, etc)
