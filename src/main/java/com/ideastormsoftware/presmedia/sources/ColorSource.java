@@ -1,8 +1,10 @@
 package com.ideastormsoftware.presmedia.sources;
 
+import com.ideastormsoftware.presmedia.ConfigurationContext;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
+import javax.swing.JPanel;
 import org.opencv.core.Size;
 
 /**
@@ -28,11 +30,17 @@ public class ColorSource implements ImageSource {
     }
 
     @Override
-    public void togglePaused() {
+    public JPanel getConfigurationPanel(ConfigurationContext context) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public void setPaused(boolean paused) {
+    public boolean dependsOn(ImageSource source) {
+        return false;
+    }
+
+    @Override
+    public void replaceSource(ImageSource source, ImageSource replacement) {
     }
     
 }

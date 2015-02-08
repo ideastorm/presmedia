@@ -5,16 +5,24 @@
  */
 package com.ideastormsoftware.presmedia.forms;
 
+import com.ideastormsoftware.presmedia.ConfigurationContext;
+import com.ideastormsoftware.presmedia.filters.Overlay;
+import com.ideastormsoftware.presmedia.sources.Camera;
+import com.ideastormsoftware.presmedia.sources.ColorSource;
+import java.awt.Color;
+
 /**
  *
  * @author Phillip
  */
 public class GraphBuilder extends javax.swing.JFrame {
+    private final ConfigurationContext configuration;
 
     /**
      * Creates new form FilterBuilder
      */
     public GraphBuilder() {
+        configuration = new ConfigurationContext();
         initComponents();
     }
 
@@ -40,6 +48,7 @@ public class GraphBuilder extends javax.swing.JFrame {
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
 
+        jList1.setModel(configuration);
         jScrollPane1.setViewportView(jList1);
 
         jLabel1.setText("Graph Items");
@@ -147,10 +156,13 @@ public class GraphBuilder extends javax.swing.JFrame {
             case "Add...":
                 break;
             case "Add Webcam source":
+                configuration.addSource(new Camera());
                 break;
             case "Add Solid Color source":
+                configuration.addSource(new ColorSource());
                 break;
             case "Add Overlay filter":
+                configuration.addSource(new Overlay());
                 break;
         }
         jComboBox1.setSelectedIndex(0);

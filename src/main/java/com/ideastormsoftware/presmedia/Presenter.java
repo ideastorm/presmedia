@@ -23,8 +23,6 @@ public class Presenter extends JFrame {
         });
     }
 
-    private final Camera[] cameras = new Camera[16];
-
     public Presenter() throws HeadlessException {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(640,480);
@@ -33,27 +31,11 @@ public class Presenter extends JFrame {
 
     private void buildComponents() {
         setLayout(new FlowLayout());
-        JButton camButton0 = new JButton("Camera 0");
-        camButton0.addActionListener((ActionEvent ae) -> {
-            startCamera(0);
-        });
-        add(camButton0);
         JButton buildFilterButton  = new JButton("Build Filter Graph...");
         buildFilterButton.addActionListener((ActionEvent ae) -> {
             new GraphBuilder().setVisible(true);
         });
         add(buildFilterButton);
-    }
-
-    private void startCamera(int cameraIndex) {
-        Camera camera = cameras[cameraIndex];
-        if (camera == null || !camera.isAlive()) {
-            camera = new Camera(cameraIndex);
-            camera.start();
-            cameras[cameraIndex] = camera;
-        }
-        Preview preview = new Preview("Camera " + cameraIndex, camera);
-        preview.setVisible(true);
     }
 
 }

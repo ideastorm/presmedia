@@ -7,8 +7,6 @@ import java.awt.HeadlessException;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import javax.swing.JFrame;
 import javax.swing.Timer;
@@ -29,21 +27,6 @@ class Preview extends JFrame {
         setTitle(title);
         setBackground(Color.black);
         setSize(320, 240);
-        addKeyListener(new KeyListener() {
-
-            @Override
-            public void keyTyped(KeyEvent ke) {
-            }
-
-            @Override
-            public void keyPressed(KeyEvent ke) {
-            }
-
-            @Override
-            public void keyReleased(KeyEvent ke) {
-                source.togglePaused();
-            }
-        });
         this.source = source;
         this.timer = new Timer(30, new ActionListener() {
 

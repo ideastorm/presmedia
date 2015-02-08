@@ -1,11 +1,13 @@
 package com.ideastormsoftware.presmedia.filters;
 
+import com.ideastormsoftware.presmedia.ConfigurationContext;
 import com.ideastormsoftware.presmedia.ImageUtils;
 import com.ideastormsoftware.presmedia.sources.ImageSource;
 import java.awt.AlphaComposite;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
+import javax.swing.JPanel;
 import org.opencv.core.Size;
 
 /**
@@ -13,17 +15,11 @@ import org.opencv.core.Size;
  */
 public class Overlay extends AbstractFilter {
 
-    private final ImageSource base;
-    private final ImageSource overlay;
+    private ImageSource base;
+    private ImageSource overlay;
     private double opacity;
     private Size size;
     private Point origin;
-
-    public Overlay(ImageSource base, ImageSource overlay) {
-        super(base, overlay);
-        this.base = base;
-        this.overlay = overlay;
-    }
 
     @Override
     public BufferedImage getCurrentImage() {
@@ -58,4 +54,39 @@ public class Overlay extends AbstractFilter {
         this.origin = origin;
     }
 
+    public ImageSource getBase() {
+        return base;
+    }
+
+    public void setBase(ImageSource base) {
+        this.base = base;
+    }
+
+    public ImageSource getOverlay() {
+        return overlay;
+    }
+
+    public void setOverlay(ImageSource overlay) {
+        this.overlay = overlay;
+    }
+
+    @Override
+    public JPanel getConfigurationPanel(ConfigurationContext context) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public boolean dependsOn(ImageSource source) {
+        if (base != null && base.equals(source))
+            return true;
+        return (overlay != null && overlay.equals(source));
+    }
+
+    @Override
+    public void replaceSource(ImageSource source, ImageSource replacement) {
+        if (base != null && base.equals(source))
+            base = replacement;
+        if (overlay != null && overlay.equals(source))
+            overlay = replacement;
+    }
 }
