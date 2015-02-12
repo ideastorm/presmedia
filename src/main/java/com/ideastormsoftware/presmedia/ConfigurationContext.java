@@ -36,7 +36,7 @@ public class ConfigurationContext implements ListModel<ImageSource> {
             configuredSources.remove(source);
             for (ImageSource configSource : configuredSources) {
                 if (configSource.dependsOn(source)) {
-                    configSource.replaceSource(source, new ColorSource(new Size(10, 10), Color.black));
+                    configSource.replaceSource(source, new ColorSource());
                 }
             }
             notifyListeners(new ListDataEvent(this, ListDataEvent.INTERVAL_REMOVED, index, index));

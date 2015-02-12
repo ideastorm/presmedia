@@ -1,29 +1,37 @@
 package com.ideastormsoftware.presmedia.sources;
 
 import com.ideastormsoftware.presmedia.ConfigurationContext;
+import java.awt.AlphaComposite;
 import java.awt.Color;
-import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import javax.swing.JPanel;
-import org.opencv.core.Size;
 
 /**
  * @author Phillip
  */
 public class ColorSource implements ImageSource {
-    private final BufferedImage image;
 
-    public ColorSource(Size size, Color color) {
-        image = new BufferedImage((int)size.width, (int)size.height, BufferedImage.TYPE_3BYTE_BGR);
-        setColor(color);
+    private final BufferedImage image;
+    private Color color;
+
+    public ColorSource() {
+        image = new BufferedImage(1, 1, BufferedImage.TYPE_4BYTE_ABGR);
+        setColor(Color.black);
     }
-    
+
     public final void setColor(Color color) {
-        Graphics g = image.getGraphics();
+        Graphics2D g = image.createGraphics();
+        g.setComposite(AlphaComposite.Src); //ignore current contents, even if the incoming color has an alpha component
         g.setColor(color);
         g.fillRect(0, 0, image.getWidth(), image.getHeight());
-    } 
-    
+        this.color = color;
+    }
+
+    public Color getColor() {
+        return color;
+    }
+
     @Override
     public BufferedImage getCurrentImage() {
         return image;
@@ -42,5 +50,5 @@ public class ColorSource implements ImageSource {
     @Override
     public void replaceSource(ImageSource source, ImageSource replacement) {
     }
-    
+
 }
