@@ -1,9 +1,7 @@
 package com.ideastormsoftware.presmedia.sources;
 
-import com.ideastormsoftware.presmedia.ConfigurationContext;
 import java.awt.image.BufferedImage;
 import java.util.Objects;
-import javax.swing.JPanel;
 
 public class ProxySource extends ImageSource{
     private ImageSource delegate;

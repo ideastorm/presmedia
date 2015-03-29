@@ -1,14 +1,7 @@
 package com.ideastormsoftware.presmedia.sources;
 
-import com.ideastormsoftware.presmedia.ConfigurationContext;
-import java.awt.FlowLayout;
-import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import javax.swing.JButton;
-import javax.swing.JFileChooser;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
 
 public class Video extends ImageSource {
 

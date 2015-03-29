@@ -1,18 +1,10 @@
 package com.ideastormsoftware.presmedia.sources;
 
-import com.ideastormsoftware.presmedia.ConfigurationContext;
 import com.ideastormsoftware.presmedia.util.ColorUtil;
 import java.awt.AlphaComposite;
 import java.awt.Color;
-import java.awt.FlowLayout;
 import java.awt.Graphics2D;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
 import java.awt.image.BufferedImage;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
 
 /**
  * @author Phillip
