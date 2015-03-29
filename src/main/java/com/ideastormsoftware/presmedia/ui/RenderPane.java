@@ -16,7 +16,7 @@ public class RenderPane extends JPanel{
         private ImageSource source;
     private final Timer timer;
 
-    public RenderPane(String title, ImageSource source) throws HeadlessException {
+    public RenderPane(ImageSource source) throws HeadlessException {
         setBackground(Color.black);
         setSize(320, 240);
         this.source = source;
@@ -30,11 +30,6 @@ public class RenderPane extends JPanel{
         timer.start();
     }
 
-    @Override
-    public void setVisible(boolean bln) {
-        super.setVisible(bln);
-    }
-
     public void setSource(ImageSource source) {
         this.source = source;
     }
@@ -46,6 +41,8 @@ public class RenderPane extends JPanel{
         if (w < 1 || h < 1) {
             return;
         }
+        grphcs.setColor(Color.black);
+        grphcs.fillRect(0, 0, w, h);
         BufferedImage img = source.getCurrentImage();
         if (img != null) {
             Size targetSize = ImageUtils.aspectScaledSize(img.getWidth(), img.getHeight(), w, h);

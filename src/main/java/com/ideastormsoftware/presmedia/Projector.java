@@ -1,5 +1,6 @@
 package com.ideastormsoftware.presmedia;
 
+import com.ideastormsoftware.presmedia.sources.ColorSource;
 import com.ideastormsoftware.presmedia.sources.ImageSource;
 import com.ideastormsoftware.presmedia.ui.RenderPane;
 import java.awt.Dimension;
@@ -15,16 +16,18 @@ public class Projector extends JFrame {
     RenderPane renderPane;
 
     public Projector() throws HeadlessException {
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        renderPane = new RenderPane(new ColorSource());
+        add(renderPane);
         setTitle("Presmedia Projector");
     }
 
     @Override
     public void setVisible(boolean visible) {
-        super.setVisible(visible);
         if (visible) {
             moveToSecondaryScreen();
         }
+        super.setVisible(visible);
     }
 
     public void setSource(ImageSource source) {
