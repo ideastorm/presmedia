@@ -15,8 +15,12 @@ public class ColorSource extends ImageSource {
     private Color color;
 
     public ColorSource() {
+        this(Color.black);
+    }
+
+    public ColorSource(Color color) {
         image = new BufferedImage(1, 1, BufferedImage.TYPE_4BYTE_ABGR);
-        setColor(Color.black);
+        setColor(color);
     }
 
     public final void setColor(Color color) {

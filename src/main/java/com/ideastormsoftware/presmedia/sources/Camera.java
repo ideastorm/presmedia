@@ -15,10 +15,23 @@ public class Camera extends ImageSource {
 
     private static final CameraThread[] cameraThreads = new CameraThread[16];
 
+    public static void closeAll() {
+        for (CameraThread cameraThread : cameraThreads) {
+            if (cameraThread != null) {
+                cameraThread.close();
+            }
+        }
+    }
+
     private int selectedCamera;
 
     public Camera() {
-        selectCamera(0);
+        this(0);
+    }
+    
+    public Camera(int cameraIndex)
+    {
+        selectCamera(cameraIndex);
     }
 
     @Override
@@ -53,6 +66,16 @@ public class Camera extends ImageSource {
         return null;
     }
 
+    public static int availableCameras() {
+        int i = -1;
+        do {
+            i++;
+            startCamera(i);
+        } while (cameraThreads[i].isActive());
+        cameraThreads[i].close();
+        return i;
+    }
+
     private static class CameraThread extends Thread {
 
         private final VideoCapture capture;
@@ -67,6 +90,10 @@ public class Camera extends ImageSource {
             capture = new VideoCapture(cameraIndex);
             targetFps = 29.97;
             paused = false;
+        }
+
+        boolean isActive() {
+            return capture.isOpened();
         }
 
         private void loop() {
