@@ -18,6 +18,7 @@ public class Projector extends JFrame {
     public Projector() throws HeadlessException {
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         renderPane = new RenderPane(new ColorSource());
+        renderPane.setShowOverlay(false);
         add(renderPane);
         setTitle("Presmedia Projector");
     }
