@@ -8,7 +8,7 @@ package com.ideastormsoftware.presmedia.ui;
 import com.ideastormsoftware.presmedia.Projector;
 import com.ideastormsoftware.presmedia.sources.Camera;
 import com.ideastormsoftware.presmedia.sources.ColorSource;
-import com.ideastormsoftware.presmedia.sources.ProxySource;
+import com.ideastormsoftware.presmedia.sources.CrossFadeProxySource;
 import java.awt.Color;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -22,7 +22,7 @@ public class ControlView extends javax.swing.JFrame {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
-    private final ProxySource source;
+    private final CrossFadeProxySource source;
     private final Projector projector;
     private Camera selectedCamera;
     private RenderPane selectedLiveInput;
@@ -32,7 +32,7 @@ public class ControlView extends javax.swing.JFrame {
      */
     public ControlView() {
         initComponents();
-        source = new ProxySource(new ColorSource());
+        source = new CrossFadeProxySource(new ColorSource());
         RenderPane renderPane = new RenderPane(source);
         projector = new Projector();
         projector.setSource(source);

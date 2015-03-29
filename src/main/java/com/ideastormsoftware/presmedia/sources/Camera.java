@@ -28,9 +28,8 @@ public class Camera extends ImageSource {
     public Camera() {
         this(0);
     }
-    
-    public Camera(int cameraIndex)
-    {
+
+    public Camera(int cameraIndex) {
         selectCamera(cameraIndex);
     }
 
@@ -132,9 +131,11 @@ public class Camera extends ImageSource {
         }
 
         public void close() {
-            interrupt();
             try {
-                join();
+                while (isAlive()) {
+                    interrupt();
+                    join(500);
+                }
                 capture.release();
             } catch (InterruptedException ex) {
             }

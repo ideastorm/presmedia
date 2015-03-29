@@ -1,5 +1,8 @@
 package com.ideastormsoftware.presmedia;
 
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Point;
 import java.awt.image.BufferedImage;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
@@ -46,6 +49,17 @@ public final class ImageUtils {
     public static BufferedImage copyScaled(BufferedImage img, int width, int height) {
         BufferedImage copy = new BufferedImage(width, height, img.getType());
         copy.getGraphics().drawImage(img, 0, 0, width, height, null);
+        return copy;
+    }
+    
+    public static BufferedImage copyAspectScaled(BufferedImage img, int width, int height) {
+        BufferedImage copy = new BufferedImage(width, height, img.getType());
+        Graphics g = copy.getGraphics();
+        g.setColor(Color.black);
+        g.fillRect(0, 0, width, height);
+        Size scaledSize = aspectScaledSize(img.getWidth(), img.getHeight(), width, height);
+        Point offset = new Point((width - (int)scaledSize.width)/2, (height - (int)scaledSize.height)/2);
+        g.drawImage(img, offset.x, offset.y, null);
         return copy;
     }
 
