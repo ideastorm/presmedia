@@ -11,11 +11,9 @@ import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import org.jcodec.api.JCodecException;
 
-/**
- * @author Phillip
- */
-public class Video implements ImageSource {
+public class Video extends ImageSource {
 
     private File sourceFile;
 
@@ -29,12 +27,12 @@ public class Video implements ImageSource {
 
     @Override
     public BufferedImage getCurrentImage() {
-        if (grabber != null) {
-            try {
-                return AWTUtil.toBufferedImage(grabber.getNativeFrame());
-            } catch (IOException ex) {
-            }
-        }
+//        if (grabber != null) {
+//            try {
+//                return AWTUtil.toBufferedImage(grabber.getNativeFrame());
+//            } catch (IOException ex) {
+//            }
+//        }
         return new BufferedImage(1, 1, BufferedImage.TYPE_3BYTE_BGR);
     }
 
@@ -51,11 +49,7 @@ public class Video implements ImageSource {
             int result = jfc.showOpenDialog(null);
             if (result == JFileChooser.APPROVE_OPTION) {
                 filenameField.setText(jfc.getSelectedFile().getAbsolutePath());
-                try {
-                    setSourceFile(jfc.getSelectedFile());
-                } catch (IOException | JCodecException ex) {
-                    JOptionPane.showMessageDialog(null, "Failed to load file: " + ex.getMessage());
-                }
+                setSourceFile(jfc.getSelectedFile());
             }
         });
         return panel;
@@ -68,6 +62,11 @@ public class Video implements ImageSource {
 
     @Override
     public void replaceSource(ImageSource source, ImageSource replacement) {
+    }
+
+    @Override
+    protected String sourceDescription() {
+        return "Video";
     }
 
 }
