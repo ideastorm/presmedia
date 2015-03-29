@@ -108,31 +108,6 @@ public class Overlay extends AbstractFilter {
     }
 
     @Override
-    public JPanel getConfigurationPanel(ConfigurationContext context) {
-        JPanel panel = new JPanel();
-        panel.setLayout(new GridLayout(7, 2, 5, 2));
-        panel.add(new JLabel("Base source"));
-        JComboBox<ImageSource> baseSelector = new JComboBox<>(context.getSources().toArray(new ImageSource[0]));
-        bindSelector(baseSelector, "base");
-        panel.add(baseSelector);
-        panel.add(new JLabel("Overlay source"));
-        JComboBox<ImageSource> overlaySelector = new JComboBox<>(context.getSources().toArray(new ImageSource[0]));
-        bindSelector(overlaySelector, "overlay");
-        panel.add(overlaySelector);
-        panel.add(new JLabel("Opacity (0..1)"));
-        panel.add(new JTextField(5));
-        panel.add(new JLabel("Overlay width"));
-        panel.add(new JTextField(5));
-        panel.add(new JLabel("Overlay height"));
-        panel.add(new JTextField(5));
-        panel.add(new JLabel("Overlay left offset"));
-        panel.add(new JTextField(5));
-        panel.add(new JLabel("Overlay top offset"));
-        panel.add(new JTextField(5));
-        return panel;
-    }
-
-    @Override
     public boolean dependsOn(ImageSource source) {
         if (base != null && base.equals(source)) {
             return true;

@@ -46,30 +46,6 @@ public class ColorSource extends ImageSource {
     }
 
     @Override
-    public JPanel getConfigurationPanel(ConfigurationContext context) {
-        JPanel panel = new JPanel();
-        panel.setSize(640, 480);
-        panel.setLayout(new FlowLayout());
-        panel.add(new JLabel("Color"));
-        JTextField entryField = new JTextField(ColorUtil.colorToHex(color), 9);
-        panel.add(entryField);
-        entryField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusLost(FocusEvent e) {
-                try {
-                    JTextField field = (JTextField) e.getComponent();
-                    Color newColor = ColorUtil.hexToColor(field.getText());
-                    field.setText(ColorUtil.colorToHex(newColor));
-                    setColor(newColor);
-                } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(null, ex.getMessage(), "Invalid input", JOptionPane.WARNING_MESSAGE);
-                }
-            }
-        });
-        return panel;
-    }
-
-    @Override
     public boolean dependsOn(ImageSource source) {
         return false;
     }

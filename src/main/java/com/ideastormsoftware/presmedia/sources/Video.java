@@ -34,25 +34,6 @@ public class Video extends ImageSource {
     }
 
     @Override
-    public JPanel getConfigurationPanel(ConfigurationContext context) {
-        JPanel panel = new JPanel();
-        panel.setLayout(new FlowLayout());
-        JTextField filenameField = new JTextField();
-        JButton pickButton = new JButton("Select File...");
-        panel.add(filenameField);
-        panel.add(pickButton);
-        pickButton.addActionListener((ActionEvent ae) -> {
-            JFileChooser jfc = new JFileChooser();
-            int result = jfc.showOpenDialog(null);
-            if (result == JFileChooser.APPROVE_OPTION) {
-                filenameField.setText(jfc.getSelectedFile().getAbsolutePath());
-                setSourceFile(jfc.getSelectedFile());
-            }
-        });
-        return panel;
-    }
-
-    @Override
     public boolean dependsOn(ImageSource source) {
         return false;
     }

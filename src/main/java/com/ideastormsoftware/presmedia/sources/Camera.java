@@ -1,14 +1,7 @@
 package com.ideastormsoftware.presmedia.sources;
 
-import com.ideastormsoftware.presmedia.ConfigurationContext;
 import com.ideastormsoftware.presmedia.ImageUtils;
-import java.awt.FlowLayout;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
 import java.awt.image.BufferedImage;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
 import org.opencv.highgui.Highgui;
@@ -26,29 +19,6 @@ public class Camera extends ImageSource {
 
     public Camera() {
         selectCamera(0);
-    }
-
-    @Override
-    public JPanel getConfigurationPanel(ConfigurationContext context) {
-        JPanel panel = new JPanel();
-        panel.setLayout(new FlowLayout());
-        panel.add(new JLabel("Camera #"));
-        JTextField field = new JTextField(Integer.toString(selectedCamera), 1);
-        panel.add(field);
-        panel.addFocusListener(new FocusAdapter() {
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                JTextField field = (JTextField) e.getComponent();
-                try {
-                    int newCamera = Integer.parseInt(field.getText());
-                    selectCamera(newCamera);
-                } catch (NumberFormatException ex) {
-                    warn("Invalid entry","%s is not a valid camera index.  Please enter an integer camera index.", field.getText());
-                }
-            }
-        });
-        return panel;
     }
 
     @Override

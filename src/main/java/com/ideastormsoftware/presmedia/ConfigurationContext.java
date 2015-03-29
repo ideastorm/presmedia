@@ -6,7 +6,6 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.UnaryOperator;
 import javax.swing.JPanel;
 import javax.swing.ListModel;
 import javax.swing.event.ListDataEvent;
@@ -84,11 +83,6 @@ public class ConfigurationContext extends ImageSource implements ListModel<Image
         if (configuredSources.isEmpty())
             return new BufferedImage(1,1,BufferedImage.TYPE_3BYTE_BGR);
         return configuredSources.get(configuredSources.size()-1).getCurrentImage();
-    }
-
-    @Override
-    public JPanel getConfigurationPanel(ConfigurationContext context) {
-        return new JPanel();
     }
 
     @Override

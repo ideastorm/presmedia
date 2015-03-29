@@ -24,11 +24,6 @@ public class ProxySource extends ImageSource{
     }
 
     @Override
-    public JPanel getConfigurationPanel(ConfigurationContext context) {
-        return null;
-    }
-
-    @Override
     public boolean dependsOn(ImageSource source) {
         return Objects.equals(delegate, source);
     }
