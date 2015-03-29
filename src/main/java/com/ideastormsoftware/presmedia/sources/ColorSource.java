@@ -1,16 +1,23 @@
 package com.ideastormsoftware.presmedia.sources;
 
 import com.ideastormsoftware.presmedia.ConfigurationContext;
+import com.ideastormsoftware.presmedia.util.ColorUtil;
 import java.awt.AlphaComposite;
 import java.awt.Color;
+import java.awt.FlowLayout;
 import java.awt.Graphics2D;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.image.BufferedImage;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 
 /**
  * @author Phillip
  */
-public class ColorSource implements ImageSource {
+public class ColorSource extends ImageSource {
 
     private final BufferedImage image;
     private Color color;
@@ -26,6 +33,7 @@ public class ColorSource implements ImageSource {
         g.setColor(color);
         g.fillRect(0, 0, image.getWidth(), image.getHeight());
         this.color = color;
+        fireChanged();
     }
 
     public Color getColor() {
@@ -39,7 +47,26 @@ public class ColorSource implements ImageSource {
 
     @Override
     public JPanel getConfigurationPanel(ConfigurationContext context) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        JPanel panel = new JPanel();
+        panel.setSize(640, 480);
+        panel.setLayout(new FlowLayout());
+        panel.add(new JLabel("Color"));
+        JTextField entryField = new JTextField(ColorUtil.colorToHex(color), 9);
+        panel.add(entryField);
+        entryField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                try {
+                    JTextField field = (JTextField) e.getComponent();
+                    Color newColor = ColorUtil.hexToColor(field.getText());
+                    field.setText(ColorUtil.colorToHex(newColor));
+                    setColor(newColor);
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(null, ex.getMessage(), "Invalid input", JOptionPane.WARNING_MESSAGE);
+                }
+            }
+        });
+        return panel;
     }
 
     @Override
@@ -51,4 +78,8 @@ public class ColorSource implements ImageSource {
     public void replaceSource(ImageSource source, ImageSource replacement) {
     }
 
+    @Override
+    protected String sourceDescription() {
+        return String.format("Color %s", ColorUtil.colorToHex(color));
+    }
 }

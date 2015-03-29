@@ -49,6 +49,10 @@ public final class ImageUtils {
         return copy;
     }
 
+    public static BufferedImage emptyImage() {
+        return new BufferedImage(320, 240, BufferedImage.TYPE_4BYTE_ABGR);
+    }
+
     private ImageUtils() {
     }
 

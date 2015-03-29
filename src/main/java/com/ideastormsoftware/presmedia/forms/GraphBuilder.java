@@ -6,16 +6,20 @@
 package com.ideastormsoftware.presmedia.forms;
 
 import com.ideastormsoftware.presmedia.ConfigurationContext;
+import com.ideastormsoftware.presmedia.Preview;
 import com.ideastormsoftware.presmedia.filters.Overlay;
 import com.ideastormsoftware.presmedia.sources.Camera;
 import com.ideastormsoftware.presmedia.sources.ColorSource;
 import com.ideastormsoftware.presmedia.sources.ImageSource;
+import javax.swing.JPanel;
+import javax.swing.SpringLayout;
 
 /**
  *
  * @author Phillip
  */
 public class GraphBuilder extends javax.swing.JFrame {
+
     private final ConfigurationContext configuration;
 
     /**
@@ -45,6 +49,7 @@ public class GraphBuilder extends javax.swing.JFrame {
         moveDownButton = new javax.swing.JButton();
         configurationContainer = new javax.swing.JPanel();
         jButton4 = new javax.swing.JButton();
+        jButton1 = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
 
@@ -83,18 +88,19 @@ public class GraphBuilder extends javax.swing.JFrame {
             }
         });
 
-        javax.swing.GroupLayout configurationContainerLayout = new javax.swing.GroupLayout(configurationContainer);
-        configurationContainer.setLayout(configurationContainerLayout);
-        configurationContainerLayout.setHorizontalGroup(
-            configurationContainerLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 0, Short.MAX_VALUE)
-        );
-        configurationContainerLayout.setVerticalGroup(
-            configurationContainerLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 0, Short.MAX_VALUE)
-        );
-
         jButton4.setText("Save");
+        jButton4.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton4ActionPerformed(evt);
+            }
+        });
+
+        jButton1.setText("Preview");
+        jButton1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton1ActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -121,7 +127,10 @@ public class GraphBuilder extends javax.swing.JFrame {
                                 .addComponent(moveDownButton))
                             .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(configurationContainer, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                        .addComponent(configurationContainer, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addComponent(jButton1)))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -145,7 +154,9 @@ public class GraphBuilder extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel2)
                     .addComponent(jButton4))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jButton1)
+                .addContainerGap(31, Short.MAX_VALUE))
         );
 
         pack();
@@ -174,21 +185,40 @@ public class GraphBuilder extends javax.swing.JFrame {
     }//GEN-LAST:event_jComboBox1ActionPerformed
 
     private void deleteButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteButtonActionPerformed
-        if (sourceList.getSelectedValue() != null)
-           configuration.removeSource((ImageSource) sourceList.getSelectedValue());
+        if (sourceList.getSelectedValue() != null) {
+            configuration.removeSource((ImageSource) sourceList.getSelectedValue());
+        }
     }//GEN-LAST:event_deleteButtonActionPerformed
 
     private void sourceListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_sourceListValueChanged
         ImageSource item = (ImageSource) sourceList.getSelectedValue();
         if (item != null) {
             configurationContainer.removeAll();
-            configurationContainer.add(item.getConfigurationPanel(configuration));
+            JPanel configPanel = item.getConfigurationPanel(configuration);
+            SpringLayout layout = new SpringLayout();
+            configurationContainer.setLayout(layout);
+            configurationContainer.add(configPanel);
+            layout.putConstraint(SpringLayout.NORTH, configPanel, 0, SpringLayout.NORTH, configurationContainer);
+            layout.putConstraint(SpringLayout.SOUTH, configPanel, 0, SpringLayout.SOUTH, configurationContainer);
+            layout.putConstraint(SpringLayout.EAST, configPanel, 0, SpringLayout.EAST, configurationContainer);
+            layout.putConstraint(SpringLayout.WEST, configPanel, 0, SpringLayout.WEST, configurationContainer);
+            configurationContainer.revalidate();
         }
     }//GEN-LAST:event_sourceListValueChanged
+
+    private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jButton4ActionPerformed
+
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        // TODO add your handling code here:
+        new Preview("Filter Graph", configuration).setVisible(true);
+    }//GEN-LAST:event_jButton1ActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPanel configurationContainer;
     private javax.swing.JButton deleteButton;
+    private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton4;
     private javax.swing.JComboBox jComboBox1;
     private javax.swing.JLabel jLabel1;

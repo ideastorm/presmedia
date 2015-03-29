@@ -2,8 +2,13 @@ package com.ideastormsoftware.presmedia.sources;
 
 import com.ideastormsoftware.presmedia.ConfigurationContext;
 import com.ideastormsoftware.presmedia.ImageUtils;
+import java.awt.FlowLayout;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.image.BufferedImage;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
 import org.opencv.highgui.Highgui;
@@ -13,7 +18,7 @@ import org.opencv.highgui.VideoCapture;
  *
  * @author Phillip
  */
-public class Camera implements ImageSource {
+public class Camera extends ImageSource {
 
     private static final CameraThread[] cameraThreads = new CameraThread[16];
 
@@ -25,7 +30,25 @@ public class Camera implements ImageSource {
 
     @Override
     public JPanel getConfigurationPanel(ConfigurationContext context) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        JPanel panel = new JPanel();
+        panel.setLayout(new FlowLayout());
+        panel.add(new JLabel("Camera #"));
+        JTextField field = new JTextField(Integer.toString(selectedCamera), 1);
+        panel.add(field);
+        panel.addFocusListener(new FocusAdapter() {
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                JTextField field = (JTextField) e.getComponent();
+                try {
+                    int newCamera = Integer.parseInt(field.getText());
+                    selectCamera(newCamera);
+                } catch (NumberFormatException ex) {
+                    warn("Invalid entry","%s is not a valid camera index.  Please enter an integer camera index.", field.getText());
+                }
+            }
+        });
+        return panel;
     }
 
     @Override
@@ -40,6 +63,7 @@ public class Camera implements ImageSource {
     public final void selectCamera(int cameraIndex) {
         selectedCamera = cameraIndex;
         startCamera(cameraIndex);
+        fireChanged();
     }
 
     private static void startCamera(int cameraIndex) {
@@ -135,5 +159,10 @@ public class Camera implements ImageSource {
             capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, selectedSize.height);
             capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, selectedSize.width);
         }
+    }
+
+    @Override
+    protected String sourceDescription() {
+        return String.format("WebCam %d", selectedCamera);
     }
 }

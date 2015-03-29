@@ -12,11 +12,7 @@ import javax.swing.JFrame;
 import javax.swing.Timer;
 import org.opencv.core.Size;
 
-/**
- *
- * @author Phillip
- */
-class Preview extends JFrame {
+public class Preview extends JFrame {
 
     private ImageSource source;
     private final Timer timer;
