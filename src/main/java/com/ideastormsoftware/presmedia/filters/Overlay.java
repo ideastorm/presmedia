@@ -1,27 +1,22 @@
 package com.ideastormsoftware.presmedia.filters;
 
-import com.ideastormsoftware.presmedia.ConfigurationContext;
 import com.ideastormsoftware.presmedia.ImageUtils;
 import com.ideastormsoftware.presmedia.sources.ImageSource;
 import java.awt.AlphaComposite;
 import java.awt.Graphics2D;
-import java.awt.GridLayout;
 import java.awt.Point;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Field;
 import javax.swing.JComboBox;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
 import org.opencv.core.Size;
 
 /**
  * @author Phillip
  */
 public class Overlay extends AbstractFilter {
-    
+
     public ImageSource base;
     public ImageSource overlay;
     double opacity = 1.0;
@@ -33,8 +28,23 @@ public class Overlay extends AbstractFilter {
         BufferedImage image = base != null ? ImageUtils.copy(base.getCurrentImage()) : ImageUtils.emptyImage();
         BufferedImage overlayImage = overlay != null ? overlay.getCurrentImage() : ImageUtils.emptyImage();
         Size localSize = size;
-        if (localSize == null)
+        if (localSize == null) {
             localSize = new Size(overlayImage.getWidth(), overlayImage.getHeight());
+        }
+        Graphics2D g = (Graphics2D) image.getGraphics();
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.DST_OVER, (float) opacity));
+        g.drawImage(overlayImage, (int) origin.getX(), (int) origin.getY(), (int) localSize.width, (int) localSize.height, null);
+        return image;
+    }
+
+    @Override
+    public BufferedImage filter(BufferedImage original) {
+        BufferedImage image = ImageUtils.copy(original);
+        BufferedImage overlayImage = overlay != null ? overlay.getCurrentImage() : ImageUtils.emptyImage();
+        Size localSize = size;
+        if (localSize == null) {
+            localSize = new Size(overlayImage.getWidth(), overlayImage.getHeight());
+        }
         Graphics2D g = (Graphics2D) image.getGraphics();
         g.setComposite(AlphaComposite.getInstance(AlphaComposite.DST_OVER, (float) opacity));
         g.drawImage(overlayImage, (int) origin.getX(), (int) origin.getY(), (int) localSize.width, (int) localSize.height, null);
@@ -85,7 +95,7 @@ public class Overlay extends AbstractFilter {
         this.overlay = overlay;
         fireChanged();
     }
-    
+
     private void bindSelector(JComboBox<ImageSource> selector, String fieldName) {
         try {
             final Field field = getClass().getField(fieldName);
@@ -93,17 +103,18 @@ public class Overlay extends AbstractFilter {
 
                 @Override
                 public void itemStateChanged(ItemEvent e) {
-                    if (e.getStateChange() == ItemEvent.SELECTED)
+                    if (e.getStateChange() == ItemEvent.SELECTED) {
                         try {
                             field.set(Overlay.this, e.getItem());
                             fireChanged();
-                    } catch (IllegalArgumentException | IllegalAccessException ex) {
-                        ex.printStackTrace();
+                        } catch (IllegalArgumentException | IllegalAccessException ex) {
+                            ex.printStackTrace();
+                        }
                     }
                 }
             });
         } catch (NoSuchFieldException | SecurityException ex) {
-                        ex.printStackTrace();
+            ex.printStackTrace();
         }
     }
 

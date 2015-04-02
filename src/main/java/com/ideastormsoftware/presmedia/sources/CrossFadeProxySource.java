@@ -1,6 +1,7 @@
 package com.ideastormsoftware.presmedia.sources;
 
 import com.ideastormsoftware.presmedia.ImageUtils;
+import com.ideastormsoftware.presmedia.filters.AbstractFilter;
 import java.awt.AlphaComposite;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
@@ -11,6 +12,7 @@ public class CrossFadeProxySource extends ImageSource {
 
     private ImageSource delegate;
     private ImageSource fadeIntoDelegate;
+    private AbstractFilter overlay;
     private static final double fadeDuration = 0.5;
     private long fadeStartTime;
 
