@@ -9,23 +9,38 @@ import com.ideastormsoftware.presmedia.Projector;
 import com.ideastormsoftware.presmedia.sources.Camera;
 import com.ideastormsoftware.presmedia.sources.ColorSource;
 import com.ideastormsoftware.presmedia.sources.CrossFadeProxySource;
+import com.ideastormsoftware.presmedia.sources.Video;
 import java.awt.Color;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.File;
 import java.util.Set;
+import javax.swing.DefaultListModel;
+import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 import javax.swing.border.LineBorder;
+import org.bytedeco.javacv.FFmpegFrameGrabber;
+import org.bytedeco.javacv.FrameGrabber;
 import org.opencv.core.Core;
 
 public class ControlView extends javax.swing.JFrame {
 
     static {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        try {
+            FFmpegFrameGrabber.tryLoad();
+        } catch (FrameGrabber.Exception ex) {
+            System.err.println("Error loading FFmpeg library - videos will not work.");
+            ex.printStackTrace();
+        }
     }
 
     private final CrossFadeProxySource source;
     private final Projector projector;
     private Camera selectedCamera;
     private RenderPane selectedLiveInput;
+    private DefaultListModel<File> videoListModel;
+    private File selectedVideo;
 
     /**
      * Creates new form ControlView
@@ -37,6 +52,8 @@ public class ControlView extends javax.swing.JFrame {
         projector = new Projector();
         projector.setSource(source);
         outputContainer.add(renderPane);
+        videoListModel = new DefaultListModel<>();
+        jList3.setModel(videoListModel);
     }
 
     @Override
@@ -61,6 +78,8 @@ public class ControlView extends javax.swing.JFrame {
         outputContainer = new javax.swing.JPanel();
         jLabel2 = new javax.swing.JLabel();
         jPanel1 = new javax.swing.JPanel();
+        jScrollPane4 = new javax.swing.JScrollPane();
+        jList3 = new javax.swing.JList();
         jLabel1 = new javax.swing.JLabel();
         jLabel3 = new javax.swing.JLabel();
         jButton1 = new javax.swing.JButton();
@@ -83,7 +102,7 @@ public class ControlView extends javax.swing.JFrame {
         jButton10 = new javax.swing.JButton();
         jToggleButton2 = new javax.swing.JToggleButton();
         displayCamera = new javax.swing.JToggleButton();
-        jToggleButton4 = new javax.swing.JToggleButton();
+        displayVideo = new javax.swing.JToggleButton();
         jScrollPane3 = new javax.swing.JScrollPane();
         inputPreviews = new javax.swing.JPanel();
 
@@ -95,15 +114,27 @@ public class ControlView extends javax.swing.JFrame {
 
         jPanel1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(153, 153, 153)));
 
+        jList3.setModel(new javax.swing.AbstractListModel() {
+            String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
+            public int getSize() { return strings.length; }
+            public Object getElementAt(int i) { return strings[i]; }
+        });
+        jList3.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+            public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
+                jList3ValueChanged(evt);
+            }
+        });
+        jScrollPane4.setViewportView(jList3);
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 0, Short.MAX_VALUE)
+            .addComponent(jScrollPane4)
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 0, Short.MAX_VALUE)
+            .addComponent(jScrollPane4)
         );
 
         jLabel1.setText("Live Inputs");
@@ -111,8 +142,18 @@ public class ControlView extends javax.swing.JFrame {
         jLabel3.setText("Videos");
 
         jButton1.setText("Add");
+        jButton1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton1ActionPerformed(evt);
+            }
+        });
 
         jButton2.setText("Remove");
+        jButton2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton2ActionPerformed(evt);
+            }
+        });
 
         jButton3.setText("Configure...");
         jButton3.addActionListener(new java.awt.event.ActionListener() {
@@ -224,7 +265,12 @@ public class ControlView extends javax.swing.JFrame {
             }
         });
 
-        jToggleButton4.setText("Play Selected Video");
+        displayVideo.setText("Play Selected Video");
+        displayVideo.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                displayVideoActionPerformed(evt);
+            }
+        });
 
         jScrollPane3.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(153, 153, 153)));
 
@@ -251,7 +297,7 @@ public class ControlView extends javax.swing.JFrame {
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                             .addComponent(jPanel1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(jLabel3, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 160, Short.MAX_VALUE)
-                            .addComponent(jToggleButton4, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                            .addComponent(displayVideo, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                     .addGroup(layout.createSequentialGroup()
                         .addGap(10, 10, 10)
                         .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 79, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -292,7 +338,7 @@ public class ControlView extends javax.swing.JFrame {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(displayCamera)
-                            .addComponent(jToggleButton4)))
+                            .addComponent(displayVideo)))
                     .addComponent(jPanel2, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(outputContainer, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
@@ -323,10 +369,13 @@ public class ControlView extends javax.swing.JFrame {
                     if (selectedLiveInput != null) {
                         selectedLiveInput.setBorder(new LineBorder(Color.black, 2));
                     }
+                    boolean fireUpdate = selectedCamera != camera;
                     selectedCamera = camera;
                     selectedLiveInput = preview;
                     preview.setBorder(new LineBorder(Color.red, 2));
-                    updatePreview();
+                    if (fireUpdate) {
+                        updatePreview();
+                    }
                 }
             });
             preview.setSize(160, 120);
@@ -338,6 +387,41 @@ public class ControlView extends javax.swing.JFrame {
     private void displayCameraActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_displayCameraActionPerformed
         updatePreview();
     }//GEN-LAST:event_displayCameraActionPerformed
+
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        JFileChooser fc = new JFileChooser();
+        fc.setMultiSelectionEnabled(true);
+        int closeAction = fc.showOpenDialog(this);
+        if (closeAction == JFileChooser.APPROVE_OPTION) {
+            for (File file : fc.getSelectedFiles()) {
+                videoListModel.addElement(file);
+            }
+        }
+    }//GEN-LAST:event_jButton1ActionPerformed
+
+    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+        if (jList3.getSelectedIndex() >= 0) {
+            videoListModel.removeElementAt(jList3.getSelectedIndex());
+        }
+    }//GEN-LAST:event_jButton2ActionPerformed
+
+    private void displayVideoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_displayVideoActionPerformed
+        if (jList3.getSelectedIndex() >= 0) {
+            selectedVideo = videoListModel.getElementAt(jList3.getSelectedIndex());
+        }
+        updatePreview();
+    }//GEN-LAST:event_displayVideoActionPerformed
+
+    private void jList3ValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_jList3ValueChanged
+        File newVideo = selectedVideo;
+        if (jList3.getSelectedIndex() >= 0) {
+            newVideo = videoListModel.getElementAt(jList3.getSelectedIndex());
+        }
+        if (newVideo != selectedVideo) {
+            selectedVideo = newVideo;
+            updatePreview();
+        }
+    }//GEN-LAST:event_jList3ValueChanged
 
     /**
      * @param args the command line arguments
@@ -374,8 +458,13 @@ public class ControlView extends javax.swing.JFrame {
         });
     }
 
+    private void warn(String message, Throwable exception) {
+        JOptionPane.showMessageDialog(rootPane, message + exception.getMessage(), "Warning", JOptionPane.WARNING_MESSAGE);
+    }
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JToggleButton displayCamera;
+    private javax.swing.JToggleButton displayVideo;
     private javax.swing.JPanel inputPreviews;
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton10;
@@ -394,21 +483,29 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel6;
     private javax.swing.JList jList1;
     private javax.swing.JList jList2;
+    private javax.swing.JList jList3;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
+    private javax.swing.JScrollPane jScrollPane4;
     private javax.swing.JToggleButton jToggleButton1;
     private javax.swing.JToggleButton jToggleButton2;
-    private javax.swing.JToggleButton jToggleButton4;
     private javax.swing.JPanel outputContainer;
     // End of variables declaration//GEN-END:variables
 
     private void updatePreview() {
-        if (displayCamera.isSelected() && selectedCamera != null) {
-            source.setDelegate(selectedCamera);
-        } else {
+        try {
+            if (displayVideo.isSelected() && selectedVideo != null) {
+                source.setDelegate(new Video(selectedVideo.getAbsolutePath()));
+            } else if (displayCamera.isSelected() && selectedCamera != null) {
+                source.setDelegate(selectedCamera);
+            } else {
+                source.setDelegate(new ColorSource());
+            }
+        } catch (Throwable e) {
+            e.printStackTrace();
             source.setDelegate(new ColorSource());
         }
     }

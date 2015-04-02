@@ -19,6 +19,13 @@ public class CrossFadeProxySource extends ImageSource {
     }
 
     public void setDelegate(ImageSource delegate) {
+        if (this.delegate instanceof Video) {
+            ((Video) this.delegate).stop();
+        }
+
+        if (delegate instanceof Video) {
+            ((Video) delegate).start();
+        }
         if (fadeIntoDelegate != null) {
             this.delegate = fadeIntoDelegate;
         }
@@ -27,6 +34,12 @@ public class CrossFadeProxySource extends ImageSource {
     }
 
     public void setDelegateNoFade(ImageSource delegate) {
+        if (this.delegate instanceof Video) {
+            ((Video) this.delegate).stop();
+        }
+        if (delegate instanceof Video) {
+            ((Video) delegate).start();
+        }
         this.delegate = delegate;
         fadeIntoDelegate = null;
     }
@@ -57,7 +70,6 @@ public class CrossFadeProxySource extends ImageSource {
                 delegate = fadeIntoDelegate;
                 fadeIntoDelegate = null;
             }
-            log(String.format("Alpha %01.3f", alpha));
             g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
             g.drawImage(overlayImage, 0, 0, null);
         }
