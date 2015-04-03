@@ -443,15 +443,13 @@ public class ControlView extends javax.swing.JFrame {
                     break;
                 }
             }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(ControlView.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(ControlView.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(ControlView.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
             java.util.logging.Logger.getLogger(ControlView.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
+        //</editor-fold>
+        
+        //</editor-fold>
+        
         //</editor-fold>
 
         /* Create and display the form */
@@ -503,7 +501,7 @@ public class ControlView extends javax.swing.JFrame {
     private void updatePreview() {
         try {
             if (displayVideo.isSelected() && selectedVideo != null) {
-                source.setDelegate(new Video(selectedVideo.getAbsolutePath(), ()->{
+                source.setDelegate(new Video(selectedVideo.getAbsolutePath(), () -> {
                     displayVideo.setSelected(false);
                     updatePreview();
                 }));

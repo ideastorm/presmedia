@@ -2,23 +2,16 @@ package com.ideastormsoftware.presmedia.sources;
 
 import com.ideastormsoftware.presmedia.ImageUtils;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.DoubleBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
@@ -167,13 +160,6 @@ public class Video extends ImageSource {
         }
     }
 
-    private void playSamples(Buffer[] samples) {
-        byte[] buffer = converter.prepareSamplesForPlayback(samples);
-        if (mLine != null) {
-            mLine.write(buffer, 0, buffer.length);
-        }
-    }
-
     private void closeJavaSound() {
         if (mLine != null) {
             mLine.drain();
@@ -208,7 +194,7 @@ public class Video extends ImageSource {
     private static final Object threadLock = new Object();
 
     private String bytePointerToString(BytePointer ptr) {
-        byte[] bytes = new byte[ptr.capacity()];
+        byte[] bytes = new byte[ptr.limit()];
         ptr.get(bytes);
         return new String(bytes);
     }
@@ -225,6 +211,8 @@ public class Video extends ImageSource {
         @Override
         public void run() {
             boolean normalExit = false;
+            AudioThread audioThread = new AudioThread();
+            audioThread.start();
             try {
                 synchronized (threadLock) {
                     try {
@@ -233,14 +221,14 @@ public class Video extends ImageSource {
                             ffmpeg.start();
                             openJavaSound(ffmpeg);
                             log("sound system initialized");
-//                            long targetDuration = (long) (1_000_000 / ffmpeg.getFrameRate());
+                            long startTime = System.nanoTime() / 1000;
                             while (!canceled && !interrupted()) {
                                 try {
-//                                    long loopStart = System.nanoTime();
                                     Frame frame = ffmpeg.grabFrame();
+                                    long targetEnd = (long) (startTime + ffmpeg.getFrameNumber() * 1_000_000 / ffmpeg.getFrameRate());
                                     if (frame != null) {
                                         if (frame.samples != null) {
-                                            playSamples(frame.samples);
+                                            audioThread.samples.put(converter.prepareSamplesForPlayback(frame.samples));
                                         }
                                         if (frame.image != null) {
                                             currentImage = frame.image.getBufferedImage();
@@ -249,17 +237,21 @@ public class Video extends ImageSource {
                                         normalExit = true;
                                         break;
                                     }
-//                                    long loopDuration = System.nanoTime() - loopStart;
-//                                    TimeUnit.NANOSECONDS.sleep(targetDuration - loopDuration);
+                                    long delay = targetEnd - System.nanoTime() / 1000;
+                                    if (delay > 0) {
+                                        TimeUnit.MICROSECONDS.sleep(delay);
+                                    }
                                 } catch (FrameGrabber.Exception e) {
                                     e.printStackTrace();
                                     currentImage = ImageUtils.emptyImage();
-//                                } catch (InterruptedException ex) {
-//                                    log("got interrupted");
-//                                    return;
+                                } catch (InterruptedException ex) {
+                                    log("got interrupted");
+                                    return;
                                 }
                             }
                         } finally {
+                            audioThread.canceled = true;
+                            audioThread.interrupt();
                             log("in finally");
                             ffmpeg.stop();
                             ffmpeg.release();
@@ -300,7 +292,7 @@ public class Video extends ImageSource {
         if (buffer.hasArray()) {
             bufferData = buffer.array();
         } else {
-            bufferData = new double[buffer.capacity()];
+            bufferData = new double[buffer.limit()];
             buffer.get(bufferData);
         }
         ShortBuffer shortBuffer = ShortBuffer.allocate(bufferData.length);
@@ -316,7 +308,7 @@ public class Video extends ImageSource {
         if (buffer.hasArray()) {
             bufferData = buffer.array();
         } else {
-            bufferData = new float[buffer.capacity()];
+            bufferData = new float[buffer.limit()];
             buffer.get(bufferData);
         }
         ShortBuffer shortBuffer = ShortBuffer.allocate(bufferData.length);
@@ -332,7 +324,7 @@ public class Video extends ImageSource {
         if (buffer.hasArray()) {
             bufferData = buffer.array();
         } else {
-            bufferData = new int[buffer.capacity()];
+            bufferData = new int[buffer.limit()];
             buffer.get(bufferData);
         }
         ShortBuffer shortBuffer = ShortBuffer.allocate(bufferData.length);
@@ -442,7 +434,7 @@ public class Video extends ImageSource {
 
             int sampleByteSize = (bitSampleSize + 7) / 8;
             int frameSize = channels * sampleByteSize;
-            int frames = ((ByteBuffer) samples[0]).capacity() / sampleByteSize;
+            int frames = ((ByteBuffer) samples[0]).limit() / sampleByteSize;
             byte[] buffer = new byte[frames * frameSize];
             for (int frame = 0; frame < frames; frame++) {
                 int frameOffset = frame * frameSize;
@@ -464,10 +456,31 @@ public class Video extends ImageSource {
             if (buffer.hasArray()) {
                 bufferData = buffer.array();
             } else {
-                bufferData = new byte[buffer.capacity()];
+                bufferData = new byte[buffer.limit()];
                 buffer.get(bufferData);
             }
             return bufferData;
         }
+    }
+
+    private class AudioThread extends Thread {
+
+        volatile boolean canceled = false;
+        final BlockingQueue<byte[]> samples = new ArrayBlockingQueue<byte[]>(16);
+
+        @Override
+        public void run() {
+            while (!canceled && !interrupted()) {
+                try {
+                    byte[] buffer = samples.take();
+                    if (mLine != null) {
+                        mLine.write(buffer, 0, buffer.length);
+                    }
+                } catch (InterruptedException ex) {
+                    return;
+                }
+            }
+        }
+
     }
 }
