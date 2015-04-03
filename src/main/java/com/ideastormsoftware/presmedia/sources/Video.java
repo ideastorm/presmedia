@@ -1,17 +1,31 @@
 package com.ideastormsoftware.presmedia.sources;
 
+import com.ideastormsoftware.presmedia.ImageUtils;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.DoubleBuffer;
+import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
+import java.nio.ShortBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import org.bytedeco.javacpp.BytePointer;
+import org.bytedeco.javacpp.ShortPointer;
 import static org.bytedeco.javacpp.avutil.*;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
@@ -22,7 +36,7 @@ public class Video extends ImageSource {
     private SourceDataLine mLine;
     private AudioConverter converter;
     private AudioFormat audioFormat;
-    private boolean planarFormat;
+    private ByteBuffer debugWavBuffer;
 
     private String sourceFile;
     private BufferedImage currentImage = new BufferedImage(1, 1, BufferedImage.TYPE_3BYTE_BGR);
@@ -77,7 +91,7 @@ public class Video extends ImageSource {
         return "Video";
     }
 
-    private void openJavaSound(FrameGrabber grabber) {
+    private void openJavaSound(FrameGrabber grabber) throws FileNotFoundException {
         int sampleFormat = grabber.getSampleFormat();
         int bitsPerSample;
         boolean signed;
@@ -95,9 +109,13 @@ public class Video extends ImageSource {
                 signed = false;
                 break;
             case AV_SAMPLE_FMT_S32:
+                bitsPerSample = 16;
+                converter = new InterleavedIntConverter();
+                signed = true;
+                break;
             case AV_SAMPLE_FMT_FLT:
-                bitsPerSample = 32;
-                converter = new InterleavedConverter();
+                bitsPerSample = 16;
+                converter = new InterleavedFltConverter();
                 signed = true;
                 break;
             case AV_SAMPLE_FMT_S16P:
@@ -106,9 +124,13 @@ public class Video extends ImageSource {
                 signed = true;
                 break;
             case AV_SAMPLE_FMT_S32P:
-            case AV_SAMPLE_FMT_FLTP:
                 bitsPerSample = 32;
-                converter = new PlanarConverter(bitsPerSample, grabber.getAudioChannels());
+                converter = new PlanarIntConverter(grabber.getAudioChannels());
+                signed = true;
+                break;
+            case AV_SAMPLE_FMT_FLTP:
+                bitsPerSample = 16;
+                converter = new PlanarFltConverter(grabber.getAudioChannels());
                 signed = true;
                 break;
             case AV_SAMPLE_FMT_U8P:
@@ -117,12 +139,12 @@ public class Video extends ImageSource {
                 signed = false;
                 break;
             case AV_SAMPLE_FMT_DBL:
-                bitsPerSample = 32;
+                bitsPerSample = 16;
                 converter = new InterleavedDblConverter();
                 signed = true;
                 break;
             case AV_SAMPLE_FMT_DBLP:
-                bitsPerSample = 32;
+                bitsPerSample = 16;
                 converter = new PlanarDblConverter(grabber.getAudioChannels());
                 signed = true;
                 break;
@@ -130,16 +152,13 @@ public class Video extends ImageSource {
                 log("No support for %d %s", sampleFormat, bytePointerToString(av_get_sample_fmt_name(sampleFormat)));
                 return;
         }
-        planarFormat = av_sample_fmt_is_planar(sampleFormat) != 0;
+        debugWavBuffer = ByteBuffer.allocate(100_000_000);
         audioFormat = new AudioFormat(
                 grabber.getSampleRate(),
                 bitsPerSample,
                 grabber.getAudioChannels(),
                 signed,
                 false);
-        if (true) {
-            return;
-        }
         DataLine.Info info = new DataLine.Info(SourceDataLine.class, audioFormat);
         try {
             mLine = (SourceDataLine) AudioSystem.getLine(info);
@@ -151,10 +170,33 @@ public class Video extends ImageSource {
     }
 
     private void playSamples(Buffer[] samples) {
+        byte[] buffer = converter.prepareSamplesForPlayback(samples);
+        debugWavBuffer.put(buffer);
         if (mLine != null) {
-            byte[] buffer = converter.prepareSamplesForPlayback(samples);
             mLine.write(buffer, 0, buffer.length);
         }
+    }
+
+    private ByteBuffer createHeader() {
+        ByteBuffer wavHeader = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN);
+        try {
+            wavHeader.put("RIFF".getBytes("ASCII"));
+            wavHeader.putInt(debugWavBuffer.position() + 36);
+            wavHeader.put("WAVE".getBytes("ASCII"));
+            wavHeader.put("fmt ".getBytes("ASCII"));
+            wavHeader.putInt(16);
+            wavHeader.putShort((short) 1);
+            wavHeader.putShort((short) audioFormat.getChannels());
+            wavHeader.putInt((int) audioFormat.getSampleRate());
+            wavHeader.putInt((int) (audioFormat.getFrameSize() * audioFormat.getSampleRate()));
+            wavHeader.putShort((short) audioFormat.getFrameSize());
+            wavHeader.putShort((short) audioFormat.getSampleSizeInBits());
+            wavHeader.put("data".getBytes("ASCII"));
+            wavHeader.putInt(debugWavBuffer.position());
+            wavHeader.rewind();
+        } catch (UnsupportedEncodingException ex) {
+        }
+        return wavHeader;
     }
 
     private void closeJavaSound() {
@@ -162,6 +204,20 @@ public class Video extends ImageSource {
             mLine.drain();
             mLine.close();
             mLine = null;
+        }
+        ByteBuffer wavHeader = createHeader();
+        debugWavBuffer.limit(debugWavBuffer.position());
+        debugWavBuffer.position(0);
+        File file = new File("debug.wav");
+        log("Writing debug.wav to %s", file.getAbsolutePath());
+        Path path = file.toPath();
+        try (FileChannel channel = FileChannel.open(path, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)) {
+            channel.write(wavHeader);
+            channel.write(debugWavBuffer);
+            log("debug.wav written to %s", file.getAbsolutePath());
+        } catch (IOException ex) {
+            log("Unable to write debug wave file");
+            ex.printStackTrace();
         }
     }
 
@@ -213,34 +269,33 @@ public class Video extends ImageSource {
                     try {
                         FFmpegFrameGrabber ffmpeg = FFmpegFrameGrabber.createDefault(sourceFile);
                         try {
-
                             ffmpeg.start();
                             openJavaSound(ffmpeg);
                             log("sound system initialized");
-                            long targetDuration = (long) (1_000_000_000 / ffmpeg.getFrameRate());
+//                            long targetDuration = (long) (1_000_000 / ffmpeg.getFrameRate());
                             while (!canceled && !interrupted()) {
                                 try {
-                                    long loopStart = System.nanoTime();
+//                                    long loopStart = System.nanoTime();
                                     Frame frame = ffmpeg.grabFrame();
                                     if (frame != null) {
-                                        if (frame.image != null) {
-                                            currentImage = frame.image.getBufferedImage();
-                                        }
                                         if (frame.samples != null) {
                                             playSamples(frame.samples);
+                                        }
+                                        if (frame.image != null) {
+                                            currentImage = frame.image.getBufferedImage();
                                         }
                                     } else {
                                         normalExit = true;
                                         break;
                                     }
-                                    long loopDuration = System.nanoTime() - loopStart;
-                                    TimeUnit.NANOSECONDS.sleep(targetDuration - loopDuration);
+//                                    long loopDuration = System.nanoTime() - loopStart;
+//                                    TimeUnit.NANOSECONDS.sleep(targetDuration - loopDuration);
                                 } catch (FrameGrabber.Exception e) {
                                     e.printStackTrace();
-                                    currentImage = new BufferedImage(1, 1, BufferedImage.TYPE_3BYTE_BGR);
-                                } catch (InterruptedException ex) {
-                                    log("got interrupted");
-                                    return;
+                                    currentImage = ImageUtils.emptyImage();
+//                                } catch (InterruptedException ex) {
+//                                    log("got interrupted");
+//                                    return;
                                 }
                             }
                         } finally {
@@ -279,7 +334,7 @@ public class Video extends ImageSource {
         byte[] prepareSamplesForPlayback(Buffer[] samples);
     }
 
-    private static IntBuffer convertDblToIntBuffer(DoubleBuffer buffer) {
+    private static Buffer convertDblToShortBuffer(DoubleBuffer buffer) {
         double[] bufferData;
         if (buffer.hasArray()) {
             bufferData = buffer.array();
@@ -287,24 +342,91 @@ public class Video extends ImageSource {
             bufferData = new double[buffer.capacity()];
             buffer.get(bufferData);
         }
-        IntBuffer intBuffer = IntBuffer.allocate(bufferData.length);
+        ShortBuffer shortBuffer = ShortBuffer.allocate(bufferData.length);
         for (double c : bufferData) {
-            intBuffer.put((int) (c * Integer.MAX_VALUE));
+            shortBuffer.put((short) (c * Short.MAX_VALUE));
         }
-        return intBuffer;
+        shortBuffer.rewind();
+        return new ShortPointer(shortBuffer).asByteBuffer();
     }
 
-    private static class PlanarDblConverter extends PlanarConverter {
+    private static Buffer convertFltToShortBuffer(FloatBuffer buffer) {
+        float[] bufferData;
+        if (buffer.hasArray()) {
+            bufferData = buffer.array();
+        } else {
+            bufferData = new float[buffer.capacity()];
+            buffer.get(bufferData);
+        }
+        ShortBuffer shortBuffer = ShortBuffer.allocate(bufferData.length);
+        for (double c : bufferData) {
+            shortBuffer.put((short) (c * Short.MAX_VALUE));
+        }
+        shortBuffer.rewind();
+        return new ShortPointer(shortBuffer).asByteBuffer();
+    }
 
-        public PlanarDblConverter(int channels) {
-            super(32, channels);
+    private static Buffer convertIntToShortBuffer(IntBuffer buffer) {
+        int[] bufferData;
+        if (buffer.hasArray()) {
+            bufferData = buffer.array();
+        } else {
+            bufferData = new int[buffer.capacity()];
+            buffer.get(bufferData);
+        }
+        ShortBuffer shortBuffer = ShortBuffer.allocate(bufferData.length);
+        for (double c : bufferData) {
+            shortBuffer.put((short) (((double) c) / Integer.MAX_VALUE * Short.MAX_VALUE));
+        }
+        shortBuffer.rewind();
+        return new ShortPointer(shortBuffer).asByteBuffer();
+    }
+
+    private static class PlanarFltConverter extends PlanarConverter {
+
+        public PlanarFltConverter(int channels) {
+            super(16, channels);
         }
 
         @Override
         public byte[] prepareSamplesForPlayback(Buffer[] samples) {
             Buffer[] convertedSamples = new Buffer[samples.length];
             for (int i = 0; i < samples.length; i++) {
-                convertedSamples[i] = convertDblToIntBuffer((DoubleBuffer) samples[i]);
+                convertedSamples[i] = convertFltToShortBuffer((FloatBuffer) samples[i]);
+            }
+            return super.prepareSamplesForPlayback(convertedSamples);
+        }
+
+    }
+
+    private static class PlanarDblConverter extends PlanarConverter {
+
+        public PlanarDblConverter(int channels) {
+            super(16, channels);
+        }
+
+        @Override
+        public byte[] prepareSamplesForPlayback(Buffer[] samples) {
+            Buffer[] convertedSamples = new Buffer[samples.length];
+            for (int i = 0; i < samples.length; i++) {
+                convertedSamples[i] = convertDblToShortBuffer((DoubleBuffer) samples[i]);
+            }
+            return super.prepareSamplesForPlayback(convertedSamples);
+        }
+
+    }
+
+    private static class PlanarIntConverter extends PlanarConverter {
+
+        public PlanarIntConverter(int channels) {
+            super(16, channels);
+        }
+
+        @Override
+        public byte[] prepareSamplesForPlayback(Buffer[] samples) {
+            Buffer[] convertedSamples = new Buffer[samples.length];
+            for (int i = 0; i < samples.length; i++) {
+                convertedSamples[i] = convertIntToShortBuffer((IntBuffer) samples[i]);
             }
             return super.prepareSamplesForPlayback(convertedSamples);
         }
@@ -316,7 +438,29 @@ public class Video extends ImageSource {
         @Override
         public byte[] prepareSamplesForPlayback(Buffer[] samples) {
             DoubleBuffer buffer = (DoubleBuffer) samples[0];
-            Buffer[] convertedSamples = {convertDblToIntBuffer(buffer)};
+            Buffer[] convertedSamples = {convertDblToShortBuffer(buffer)};
+            return super.prepareSamplesForPlayback(convertedSamples);
+        }
+
+    }
+
+    private static class InterleavedFltConverter extends InterleavedConverter {
+
+        @Override
+        public byte[] prepareSamplesForPlayback(Buffer[] samples) {
+            FloatBuffer buffer = (FloatBuffer) samples[0];
+            Buffer[] convertedSamples = {convertFltToShortBuffer(buffer)};
+            return super.prepareSamplesForPlayback(convertedSamples);
+        }
+
+    }
+
+    private static class InterleavedIntConverter extends InterleavedConverter {
+
+        @Override
+        public byte[] prepareSamplesForPlayback(Buffer[] samples) {
+            IntBuffer buffer = (IntBuffer) samples[0];
+            Buffer[] convertedSamples = {convertIntToShortBuffer(buffer)};
             return super.prepareSamplesForPlayback(convertedSamples);
         }
 
