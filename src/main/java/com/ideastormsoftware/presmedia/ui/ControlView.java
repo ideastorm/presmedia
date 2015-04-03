@@ -5,6 +5,7 @@
  */
 package com.ideastormsoftware.presmedia.ui;
 
+import com.ideastormsoftware.presmedia.filters.Lyrics;
 import com.ideastormsoftware.presmedia.sources.Camera;
 import com.ideastormsoftware.presmedia.sources.ColorSource;
 import com.ideastormsoftware.presmedia.sources.CrossFadeProxySource;
@@ -40,6 +41,9 @@ public class ControlView extends javax.swing.JFrame {
     private RenderPane selectedLiveInput;
     private DefaultListModel<File> videoListModel;
     private File selectedVideo;
+    private DefaultListModel<Lyrics> lyricsListModel;
+    private Lyrics selectedLyrics;
+    private Lyrics activeLyrics;
 
     /**
      * Creates new form ControlView
@@ -53,6 +57,9 @@ public class ControlView extends javax.swing.JFrame {
         outputContainer.add(renderPane);
         videoListModel = new DefaultListModel<>();
         jList3.setModel(videoListModel);
+        lyricsListModel = new DefaultListModel<>();
+        jList2.setModel(lyricsListModel);
+
     }
 
     @Override
@@ -99,7 +106,7 @@ public class ControlView extends javax.swing.JFrame {
         jButton8 = new javax.swing.JButton();
         jButton9 = new javax.swing.JButton();
         jButton10 = new javax.swing.JButton();
-        jToggleButton2 = new javax.swing.JToggleButton();
+        showLyrics = new javax.swing.JToggleButton();
         jButton4 = new javax.swing.JButton();
         displayCamera = new javax.swing.JToggleButton();
         displayVideo = new javax.swing.JToggleButton();
@@ -190,17 +197,47 @@ public class ControlView extends javax.swing.JFrame {
             public int getSize() { return strings.length; }
             public Object getElementAt(int i) { return strings[i]; }
         });
+        jList2.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+            public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
+                jList2ValueChanged(evt);
+            }
+        });
         jScrollPane2.setViewportView(jList2);
 
         jButton8.setText("Add");
+        jButton8.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton8ActionPerformed(evt);
+            }
+        });
 
         jButton9.setText("Edit");
+        jButton9.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton9ActionPerformed(evt);
+            }
+        });
 
         jButton10.setText("Remove");
+        jButton10.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton10ActionPerformed(evt);
+            }
+        });
 
-        jToggleButton2.setText("Show Selected Song");
+        showLyrics.setText("Show Selected Song");
+        showLyrics.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                showLyricsActionPerformed(evt);
+            }
+        });
 
         jButton4.setText("Next Line");
+        jButton4.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton4ActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
@@ -227,7 +264,7 @@ public class ControlView extends javax.swing.JFrame {
                     .addComponent(jLabel6)
                     .addComponent(jLabel5)
                     .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addComponent(jToggleButton2)
+                        .addComponent(showLyrics)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jButton4)))
                 .addContainerGap())
@@ -257,7 +294,7 @@ public class ControlView extends javax.swing.JFrame {
                     .addComponent(jButton10))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jToggleButton2)
+                    .addComponent(showLyrics)
                     .addComponent(jButton4))
                 .addContainerGap())
         );
@@ -427,6 +464,47 @@ public class ControlView extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_jList3ValueChanged
 
+    private void jButton8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed
+        Lyrics lyrics = new Lyrics();
+        new LyricsEditor(lyrics, () -> {
+            lyricsListModel.addElement(lyrics);
+        }).setVisible(true);
+    }//GEN-LAST:event_jButton8ActionPerformed
+
+    private void jButton9ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton9ActionPerformed
+        if (selectedLyrics != null) {
+            new LyricsEditor(selectedLyrics, null).setVisible(true);
+        }
+    }//GEN-LAST:event_jButton9ActionPerformed
+
+    private void jList2ValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_jList2ValueChanged
+        if (jList2.getSelectedIndex() >= 0) {
+            selectedLyrics = lyricsListModel.elementAt(jList2.getSelectedIndex());
+        }
+    }//GEN-LAST:event_jList2ValueChanged
+
+    private void jButton10ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton10ActionPerformed
+        if (selectedLyrics != null) {
+            lyricsListModel.removeElement(selectedLyrics);
+        }
+        selectedLyrics = null;
+    }//GEN-LAST:event_jButton10ActionPerformed
+
+    private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
+        if (activeLyrics != null) {
+            activeLyrics.advance();
+        }
+    }//GEN-LAST:event_jButton4ActionPerformed
+
+    private void showLyricsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_showLyricsActionPerformed
+        if (showLyrics.isSelected()) {
+            activeLyrics = selectedLyrics;
+        } else {
+            activeLyrics = null;
+        }
+        source.setOverlay(activeLyrics);
+    }//GEN-LAST:event_showLyricsActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -447,9 +525,8 @@ public class ControlView extends javax.swing.JFrame {
             java.util.logging.Logger.getLogger(ControlView.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
-        
+
         //</editor-fold>
-        
         //</editor-fold>
 
         /* Create and display the form */
@@ -494,8 +571,8 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JScrollPane jScrollPane4;
     private javax.swing.JToggleButton jToggleButton1;
-    private javax.swing.JToggleButton jToggleButton2;
     private javax.swing.JPanel outputContainer;
+    private javax.swing.JToggleButton showLyrics;
     // End of variables declaration//GEN-END:variables
 
     private void updatePreview() {

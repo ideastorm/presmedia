@@ -1,8 +1,9 @@
 package com.ideastormsoftware.presmedia.filters;
 
-import com.ideastormsoftware.presmedia.sources.ImageSource;
+import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 
-public abstract class AbstractFilter extends ImageSource {
-    public abstract BufferedImage filter(BufferedImage original);
+public interface AbstractFilter {
+
+    public BufferedImage filter(BufferedImage original, Dimension targetScreenSize);
 }

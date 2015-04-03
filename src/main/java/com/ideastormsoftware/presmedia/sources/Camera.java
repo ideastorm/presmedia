@@ -33,19 +33,10 @@ public class Camera extends ImageSource {
         selectCamera(cameraIndex);
     }
 
-    @Override
-    public boolean dependsOn(ImageSource source) {
-        return false;
-    }
-
-    @Override
-    public void replaceSource(ImageSource source, ImageSource replacement) {
-    }
 
     public final void selectCamera(int cameraIndex) {
         selectedCamera = cameraIndex;
         startCamera(cameraIndex);
-        fireChanged();
     }
 
     private static void startCamera(int cameraIndex) {
@@ -157,10 +148,5 @@ public class Camera extends ImageSource {
             capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, selectedSize.height);
             capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, selectedSize.width);
         }
-    }
-
-    @Override
-    protected String sourceDescription() {
-        return String.format("WebCam %d", selectedCamera);
     }
 }

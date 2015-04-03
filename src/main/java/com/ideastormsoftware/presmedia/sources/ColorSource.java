@@ -1,5 +1,6 @@
 package com.ideastormsoftware.presmedia.sources;
 
+import com.ideastormsoftware.presmedia.ImageUtils;
 import com.ideastormsoftware.presmedia.util.ColorUtil;
 import java.awt.AlphaComposite;
 import java.awt.Color;
@@ -19,7 +20,7 @@ public class ColorSource extends ImageSource {
     }
 
     public ColorSource(Color color) {
-        image = new BufferedImage(1, 1, BufferedImage.TYPE_4BYTE_ABGR);
+        image = ImageUtils.emptyImage();
         setColor(color);
     }
 
@@ -29,7 +30,6 @@ public class ColorSource extends ImageSource {
         g.setColor(color);
         g.fillRect(0, 0, image.getWidth(), image.getHeight());
         this.color = color;
-        fireChanged();
     }
 
     public Color getColor() {
@@ -39,19 +39,5 @@ public class ColorSource extends ImageSource {
     @Override
     public BufferedImage getCurrentImage() {
         return image;
-    }
-
-    @Override
-    public boolean dependsOn(ImageSource source) {
-        return false;
-    }
-
-    @Override
-    public void replaceSource(ImageSource source, ImageSource replacement) {
-    }
-
-    @Override
-    protected String sourceDescription() {
-        return String.format("Color %s", ColorUtil.colorToHex(color));
     }
 }

@@ -69,20 +69,6 @@ public class Video extends ImageSource {
         return currentImage;
     }
 
-    @Override
-    public boolean dependsOn(ImageSource source) {
-        return false;
-    }
-
-    @Override
-    public void replaceSource(ImageSource source, ImageSource replacement) {
-    }
-
-    @Override
-    protected String sourceDescription() {
-        return "Video";
-    }
-
     private void openJavaSound(FrameGrabber grabber) throws FileNotFoundException {
         int sampleFormat = grabber.getSampleFormat();
         int bitsPerSample;
