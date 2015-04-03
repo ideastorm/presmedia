@@ -12,7 +12,6 @@ public class CrossFadeProxySource extends ImageSource {
 
     private ImageSource delegate;
     private ImageSource fadeIntoDelegate;
-    private AbstractFilter overlay;
     private static final double fadeDuration = 0.5;
     private long fadeStartTime;
     private final Projector projector;
@@ -33,8 +32,7 @@ public class CrossFadeProxySource extends ImageSource {
         if (fadeIntoDelegate != null) {
             this.delegate = fadeIntoDelegate;
         }
-        fadeIntoDelegate = delegate;
-        fadeStartTime = System.nanoTime();
+        setFadeDelegateInternal(delegate);
     }
 
     public void setDelegateNoFade(ImageSource delegate) {
@@ -48,8 +46,22 @@ public class CrossFadeProxySource extends ImageSource {
         fadeIntoDelegate = null;
     }
 
+    private void setFadeDelegateInternal(ImageSource source) {
+        fadeIntoDelegate = source;
+        fadeStartTime = System.nanoTime();
+    }
+
     public void setOverlay(AbstractFilter overlay) {
-        this.overlay = overlay;
+        ImageSource baseSource = delegate;
+        if (baseSource instanceof AbstractFilter) {
+            baseSource = ((AbstractFilter) baseSource).getSource();
+        }
+        if (overlay == null) {
+            setFadeDelegateInternal(baseSource);
+        } else {
+            overlay.setSource(baseSource);
+            setFadeDelegateInternal(overlay);
+        }
     }
 
     private float findAlpha() {
@@ -64,12 +76,10 @@ public class CrossFadeProxySource extends ImageSource {
 
     @Override
     public BufferedImage getCurrentImage() {
-        BufferedImage baseImage = delegate.getCurrentImage();
         Dimension finalSize = projector.getRenderSize();
+        BufferedImage baseImage = delegate.getCurrentImage(finalSize);
         if (fadeIntoDelegate != null) {
-            BufferedImage overlayImage = fadeIntoDelegate.getCurrentImage();
-            baseImage = ImageUtils.copyAspectScaled(baseImage, finalSize.width, finalSize.height);
-            overlayImage = ImageUtils.copyAspectScaled(overlayImage, finalSize.width, finalSize.height);
+            BufferedImage overlayImage = fadeIntoDelegate.getCurrentImage(finalSize);
             Graphics2D g = baseImage.createGraphics();
             float alpha = findAlpha();
             if (alpha >= 1) {
@@ -79,9 +89,6 @@ public class CrossFadeProxySource extends ImageSource {
             }
             g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
             g.drawImage(overlayImage, 0, 0, null);
-        }
-        if (overlay != null) {
-            return overlay.filter(baseImage, finalSize);
         }
         return baseImage;
     }

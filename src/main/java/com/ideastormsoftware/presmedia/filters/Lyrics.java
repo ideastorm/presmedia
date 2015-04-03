@@ -10,7 +10,7 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.util.List;
 
-public class Lyrics implements AbstractFilter {
+public class Lyrics extends AbstractFilter {
 
     private String title;
     private List<String> lines;
@@ -55,7 +55,7 @@ public class Lyrics implements AbstractFilter {
     }
 
     @Override
-    public BufferedImage filter(BufferedImage original, Dimension targetScreenSize) {
+    protected BufferedImage filter(BufferedImage original, Dimension targetScreenSize) {
         //Start by finding ow wide we can be to fit in a 4:3 aspect ratio screen
         int w = targetScreenSize.width;
         if (targetScreenSize.width * 3 > targetScreenSize.height * 4) {
