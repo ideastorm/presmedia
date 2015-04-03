@@ -2,6 +2,7 @@ package com.ideastormsoftware.presmedia.sources;
 
 import com.ideastormsoftware.presmedia.ImageUtils;
 import com.ideastormsoftware.presmedia.filters.AbstractFilter;
+import com.ideastormsoftware.presmedia.ui.Projector;
 import java.awt.AlphaComposite;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
@@ -15,9 +16,11 @@ public class CrossFadeProxySource extends ImageSource {
     private AbstractFilter overlay;
     private static final double fadeDuration = 0.5;
     private long fadeStartTime;
+    private final Projector projector;
 
-    public CrossFadeProxySource(ImageSource delegate) {
+    public CrossFadeProxySource(ImageSource delegate, Projector projector) {
         this.delegate = delegate;
+        this.projector = projector;
     }
 
     public void setDelegate(ImageSource delegate) {
@@ -46,6 +49,10 @@ public class CrossFadeProxySource extends ImageSource {
         fadeIntoDelegate = null;
     }
 
+    public void setOverlay(AbstractFilter overlay) {
+        this.overlay = overlay;
+    }
+
     private float findAlpha() {
         long currentStepTime = System.nanoTime();
         double fadeProgress = (currentStepTime - fadeStartTime) / 1_000_000_000.0;
@@ -61,8 +68,7 @@ public class CrossFadeProxySource extends ImageSource {
         BufferedImage baseImage = delegate.getCurrentImage();
         if (fadeIntoDelegate != null) {
             BufferedImage overlayImage = fadeIntoDelegate.getCurrentImage();
-            Dimension finalSize = new Dimension(Math.max(baseImage.getWidth(), overlayImage.getWidth()),
-                    Math.max(baseImage.getHeight(), overlayImage.getHeight()));
+            Dimension finalSize = projector.getRenderSize();
             baseImage = ImageUtils.copyAspectScaled(baseImage, finalSize.width, finalSize.height);
             overlayImage = ImageUtils.copyAspectScaled(overlayImage, finalSize.width, finalSize.height);
             Graphics2D g = baseImage.createGraphics();
@@ -75,6 +81,8 @@ public class CrossFadeProxySource extends ImageSource {
             g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
             g.drawImage(overlayImage, 0, 0, null);
         }
+        if (overlay != null)
+            return overlay.filter(baseImage);
         return baseImage;
     }
 

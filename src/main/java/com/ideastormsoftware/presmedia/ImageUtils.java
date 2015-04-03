@@ -59,7 +59,7 @@ public final class ImageUtils {
         g.fillRect(0, 0, width, height);
         Size scaledSize = aspectScaledSize(img.getWidth(), img.getHeight(), width, height);
         Point offset = new Point((width - (int)scaledSize.width)/2, (height - (int)scaledSize.height)/2);
-        g.drawImage(img, offset.x, offset.y, null);
+        g.drawImage(img, offset.x, offset.y, (int)scaledSize.width, (int)scaledSize.height, null);
         return copy;
     }
 
