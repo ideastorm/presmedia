@@ -36,7 +36,6 @@ public class Video extends ImageSource {
     private SourceDataLine mLine;
     private AudioConverter converter;
     private AudioFormat audioFormat;
-    private ByteBuffer debugWavBuffer;
 
     private String sourceFile;
     private BufferedImage currentImage = new BufferedImage(1, 1, BufferedImage.TYPE_3BYTE_BGR);
@@ -152,7 +151,6 @@ public class Video extends ImageSource {
                 log("No support for %d %s", sampleFormat, bytePointerToString(av_get_sample_fmt_name(sampleFormat)));
                 return;
         }
-        debugWavBuffer = ByteBuffer.allocate(100_000_000);
         audioFormat = new AudioFormat(
                 grabber.getSampleRate(),
                 bitsPerSample,
@@ -171,32 +169,9 @@ public class Video extends ImageSource {
 
     private void playSamples(Buffer[] samples) {
         byte[] buffer = converter.prepareSamplesForPlayback(samples);
-        debugWavBuffer.put(buffer);
         if (mLine != null) {
             mLine.write(buffer, 0, buffer.length);
         }
-    }
-
-    private ByteBuffer createHeader() {
-        ByteBuffer wavHeader = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN);
-        try {
-            wavHeader.put("RIFF".getBytes("ASCII"));
-            wavHeader.putInt(debugWavBuffer.position() + 36);
-            wavHeader.put("WAVE".getBytes("ASCII"));
-            wavHeader.put("fmt ".getBytes("ASCII"));
-            wavHeader.putInt(16);
-            wavHeader.putShort((short) 1);
-            wavHeader.putShort((short) audioFormat.getChannels());
-            wavHeader.putInt((int) audioFormat.getSampleRate());
-            wavHeader.putInt((int) (audioFormat.getFrameSize() * audioFormat.getSampleRate()));
-            wavHeader.putShort((short) audioFormat.getFrameSize());
-            wavHeader.putShort((short) audioFormat.getSampleSizeInBits());
-            wavHeader.put("data".getBytes("ASCII"));
-            wavHeader.putInt(debugWavBuffer.position());
-            wavHeader.rewind();
-        } catch (UnsupportedEncodingException ex) {
-        }
-        return wavHeader;
     }
 
     private void closeJavaSound() {
@@ -204,20 +179,6 @@ public class Video extends ImageSource {
             mLine.drain();
             mLine.close();
             mLine = null;
-        }
-        ByteBuffer wavHeader = createHeader();
-        debugWavBuffer.limit(debugWavBuffer.position());
-        debugWavBuffer.position(0);
-        File file = new File("debug.wav");
-        log("Writing debug.wav to %s", file.getAbsolutePath());
-        Path path = file.toPath();
-        try (FileChannel channel = FileChannel.open(path, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)) {
-            channel.write(wavHeader);
-            channel.write(debugWavBuffer);
-            log("debug.wav written to %s", file.getAbsolutePath());
-        } catch (IOException ex) {
-            log("Unable to write debug wave file");
-            ex.printStackTrace();
         }
     }
 
