@@ -42,7 +42,7 @@
                       <Group type="103" groupAlignment="1" max="-2" attributes="0">
                           <Component id="jPanel1" alignment="0" max="32767" attributes="0"/>
                           <Component id="jLabel3" alignment="0" max="32767" attributes="0"/>
-                          <Component id="displayVideo" alignment="0" max="32767" attributes="0"/>
+                          <Component id="displayVideo" alignment="0" pref="160" max="32767" attributes="0"/>
                       </Group>
                   </Group>
                   <Group type="102" attributes="0">
@@ -54,15 +54,22 @@
               </Group>
               <EmptySpace type="unrelated" max="-2" attributes="0"/>
               <Group type="103" groupAlignment="0" attributes="0">
-                  <Component id="jPanel2" alignment="0" min="-2" max="-2" attributes="0"/>
-                  <Component id="jLabel4" alignment="0" min="-2" max="-2" attributes="0"/>
+                  <Component id="jLabel4" min="-2" max="-2" attributes="0"/>
+                  <Component id="jPanel2" min="-2" max="-2" attributes="0"/>
               </Group>
               <EmptySpace max="-2" attributes="0"/>
               <Group type="103" groupAlignment="0" attributes="0">
                   <Component id="outputContainer" max="32767" attributes="0"/>
                   <Group type="102" attributes="0">
-                      <Component id="jLabel2" min="-2" max="-2" attributes="0"/>
-                      <EmptySpace min="0" pref="263" max="32767" attributes="0"/>
+                      <Group type="103" groupAlignment="0" attributes="0">
+                          <Component id="jLabel2" min="-2" max="-2" attributes="0"/>
+                          <Group type="102" alignment="0" attributes="0">
+                              <Component id="jButton11" min="-2" max="-2" attributes="0"/>
+                              <EmptySpace max="-2" attributes="0"/>
+                              <Component id="jButton12" min="-2" max="-2" attributes="0"/>
+                          </Group>
+                      </Group>
+                      <EmptySpace min="0" pref="52" max="32767" attributes="0"/>
                   </Group>
               </Group>
               <EmptySpace max="-2" attributes="0"/>
@@ -99,7 +106,14 @@
                       </Group>
                   </Group>
                   <Component id="jPanel2" alignment="0" max="32767" attributes="0"/>
-                  <Component id="outputContainer" max="32767" attributes="0"/>
+                  <Group type="102" alignment="0" attributes="0">
+                      <Component id="outputContainer" max="32767" attributes="0"/>
+                      <EmptySpace max="-2" attributes="0"/>
+                      <Group type="103" groupAlignment="3" attributes="0">
+                          <Component id="jButton11" alignment="3" min="-2" max="-2" attributes="0"/>
+                          <Component id="jButton12" alignment="3" min="-2" max="-2" attributes="0"/>
+                      </Group>
+                  </Group>
               </Group>
               <EmptySpace max="-2" attributes="0"/>
           </Group>
@@ -130,7 +144,7 @@
       <Layout>
         <DimensionLayout dim="0">
           <Group type="103" groupAlignment="0" attributes="0">
-              <Component id="jScrollPane4" alignment="0" min="-2" pref="158" max="-2" attributes="0"/>
+              <Component id="jScrollPane4" alignment="0" max="32767" attributes="0"/>
           </Group>
         </DimensionLayout>
         <DimensionLayout dim="1">
@@ -179,7 +193,7 @@
     </Component>
     <Component class="javax.swing.JButton" name="jButton1">
       <Properties>
-        <Property name="text" type="java.lang.String" value="Add"/>
+        <Property name="text" type="java.lang.String" value="Add..."/>
       </Properties>
       <Events>
         <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="jButton1ActionPerformed"/>
@@ -317,7 +331,7 @@
         </Container>
         <Component class="javax.swing.JButton" name="jButton5">
           <Properties>
-            <Property name="text" type="java.lang.String" value="Add"/>
+            <Property name="text" type="java.lang.String" value="Add..."/>
           </Properties>
         </Component>
         <Component class="javax.swing.JButton" name="jButton6">
@@ -327,7 +341,7 @@
         </Component>
         <Component class="javax.swing.JButton" name="jButton7">
           <Properties>
-            <Property name="text" type="java.lang.String" value="Edit"/>
+            <Property name="text" type="java.lang.String" value="Edit..."/>
           </Properties>
         </Component>
         <Component class="javax.swing.JToggleButton" name="jToggleButton1">
@@ -367,7 +381,7 @@
         </Container>
         <Component class="javax.swing.JButton" name="jButton8">
           <Properties>
-            <Property name="text" type="java.lang.String" value="Add"/>
+            <Property name="text" type="java.lang.String" value="Add..."/>
           </Properties>
           <Events>
             <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="jButton8ActionPerformed"/>
@@ -375,7 +389,7 @@
         </Component>
         <Component class="javax.swing.JButton" name="jButton9">
           <Properties>
-            <Property name="text" type="java.lang.String" value="Edit"/>
+            <Property name="text" type="java.lang.String" value="Edit..."/>
           </Properties>
           <Events>
             <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="jButton9ActionPerformed"/>
@@ -444,5 +458,15 @@
         </Container>
       </SubComponents>
     </Container>
+    <Component class="javax.swing.JButton" name="jButton11">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="Save settings..."/>
+      </Properties>
+    </Component>
+    <Component class="javax.swing.JButton" name="jButton12">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="Load Settings..."/>
+      </Properties>
+    </Component>
   </SubComponents>
 </Form>
