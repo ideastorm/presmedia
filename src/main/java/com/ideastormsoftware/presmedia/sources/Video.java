@@ -31,9 +31,11 @@ public class Video extends ImageSource {
         System.out.println(String.format("%d %s - %s", System.currentTimeMillis(),
                 Thread.currentThread().getName(), String.format(format, params)));
     }
+    private final Runnable callback;
 
-    public Video(String sourceFile) throws FrameGrabber.Exception {
+    public Video(String sourceFile, Runnable callback) throws FrameGrabber.Exception {
         this.sourceFile = sourceFile;
+        this.callback = callback;
     }
 
     public String getSourceFile() {
@@ -179,7 +181,6 @@ public class Video extends ImageSource {
                 log("shutting down processing thread.%s", grabber.getName());
                 grabber.interrupt();
             }
-            closeJavaSound();
         } catch (NullPointerException e) {
             e.printStackTrace();
         } finally {
@@ -206,6 +207,7 @@ public class Video extends ImageSource {
 
         @Override
         public void run() {
+            boolean normalExit = false;
             try {
                 synchronized (threadLock) {
                     try {
@@ -227,6 +229,9 @@ public class Video extends ImageSource {
                                         if (frame.samples != null) {
                                             playSamples(frame.samples);
                                         }
+                                    } else {
+                                        normalExit = true;
+                                        break;
                                     }
                                     long loopDuration = System.nanoTime() - loopStart;
                                     TimeUnit.NANOSECONDS.sleep(targetDuration - loopDuration);
@@ -242,6 +247,7 @@ public class Video extends ImageSource {
                             log("in finally");
                             ffmpeg.stop();
                             ffmpeg.release();
+                            closeJavaSound();
                             log("processing thread terminated");
                         }
                         log("post finally");
@@ -254,6 +260,9 @@ public class Video extends ImageSource {
                 }
             } finally {
                 log("exited thread lock - ready to go with the next thread");
+                if (normalExit) {
+                    callback.run();
+                }
             }
         }
 
@@ -295,7 +304,7 @@ public class Video extends ImageSource {
         public byte[] prepareSamplesForPlayback(Buffer[] samples) {
             Buffer[] convertedSamples = new Buffer[samples.length];
             for (int i = 0; i < samples.length; i++) {
-                convertedSamples[i] = convertDblToIntBuffer((DoubleBuffer)samples[i]);
+                convertedSamples[i] = convertDblToIntBuffer((DoubleBuffer) samples[i]);
             }
             return super.prepareSamplesForPlayback(convertedSamples);
         }
