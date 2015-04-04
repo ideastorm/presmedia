@@ -11,6 +11,7 @@ import java.awt.Color;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.util.List;
 import java.util.Set;
 import javax.swing.DefaultListModel;
 import javax.swing.JFileChooser;
@@ -38,7 +39,6 @@ public class ControlView extends javax.swing.JFrame {
     private Camera selectedCamera;
     private RenderPane selectedLiveInput;
     private final DefaultListModel<File> videoListModel;
-    private File selectedVideo;
     private final DefaultListModel<Lyrics> lyricsListModel;
     private Lyrics selectedLyrics;
     private Lyrics activeLyrics;
@@ -53,9 +53,9 @@ public class ControlView extends javax.swing.JFrame {
         RenderPane renderPane = new RenderPane(source);
         outputContainer.add(renderPane);
         videoListModel = new DefaultListModel<>();
-        jList3.setModel(videoListModel);
+        videoList.setModel(videoListModel);
         lyricsListModel = new DefaultListModel<>();
-        jList2.setModel(lyricsListModel);
+        songList.setModel(lyricsListModel);
 
     }
 
@@ -82,35 +82,36 @@ public class ControlView extends javax.swing.JFrame {
         jLabel2 = new javax.swing.JLabel();
         jPanel1 = new javax.swing.JPanel();
         jScrollPane4 = new javax.swing.JScrollPane();
-        jList3 = new javax.swing.JList();
+        videoList = new javax.swing.JList();
         jLabel1 = new javax.swing.JLabel();
         jLabel3 = new javax.swing.JLabel();
-        jButton1 = new javax.swing.JButton();
-        jButton2 = new javax.swing.JButton();
-        jButton3 = new javax.swing.JButton();
+        addVideos = new javax.swing.JButton();
+        removeVideos = new javax.swing.JButton();
+        configureCameras = new javax.swing.JButton();
         jLabel4 = new javax.swing.JLabel();
         jPanel2 = new javax.swing.JPanel();
         jLabel5 = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
-        jList1 = new javax.swing.JList();
-        jButton5 = new javax.swing.JButton();
-        jButton6 = new javax.swing.JButton();
-        jButton7 = new javax.swing.JButton();
-        jToggleButton1 = new javax.swing.JToggleButton();
+        nameList = new javax.swing.JList();
+        addName = new javax.swing.JButton();
+        removeName = new javax.swing.JButton();
+        editName = new javax.swing.JButton();
+        displayName = new javax.swing.JToggleButton();
         jLabel6 = new javax.swing.JLabel();
         jScrollPane2 = new javax.swing.JScrollPane();
-        jList2 = new javax.swing.JList();
-        jButton8 = new javax.swing.JButton();
-        jButton9 = new javax.swing.JButton();
-        jButton10 = new javax.swing.JButton();
+        songList = new javax.swing.JList();
+        addSong = new javax.swing.JButton();
+        editSong = new javax.swing.JButton();
+        removeSong = new javax.swing.JButton();
         showLyrics = new javax.swing.JToggleButton();
-        jButton4 = new javax.swing.JButton();
+        advanceLyrics = new javax.swing.JButton();
         displayCamera = new javax.swing.JToggleButton();
         displayVideo = new javax.swing.JToggleButton();
         jScrollPane3 = new javax.swing.JScrollPane();
         inputPreviews = new javax.swing.JPanel();
-        jButton11 = new javax.swing.JButton();
-        jButton12 = new javax.swing.JButton();
+        saveSettings = new javax.swing.JButton();
+        loadSettings = new javax.swing.JButton();
+        loopVideos = new javax.swing.JCheckBox();
 
         setTitle("Presmedia Control");
 
@@ -120,17 +121,17 @@ public class ControlView extends javax.swing.JFrame {
 
         jPanel1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(153, 153, 153)));
 
-        jList3.setModel(new javax.swing.AbstractListModel() {
+        videoList.setModel(new javax.swing.AbstractListModel() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
             public int getSize() { return strings.length; }
             public Object getElementAt(int i) { return strings[i]; }
         });
-        jList3.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+        videoList.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
             public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
-                jList3ValueChanged(evt);
+                videoListValueChanged(evt);
             }
         });
-        jScrollPane4.setViewportView(jList3);
+        jScrollPane4.setViewportView(videoList);
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -149,24 +150,24 @@ public class ControlView extends javax.swing.JFrame {
 
         jLabel3.setText("Videos");
 
-        jButton1.setText("Add...");
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
+        addVideos.setText("Add...");
+        addVideos.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
+                addVideosActionPerformed(evt);
             }
         });
 
-        jButton2.setText("Remove");
-        jButton2.addActionListener(new java.awt.event.ActionListener() {
+        removeVideos.setText("Remove");
+        removeVideos.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton2ActionPerformed(evt);
+                removeVideosActionPerformed(evt);
             }
         });
 
-        jButton3.setText("Configure...");
-        jButton3.addActionListener(new java.awt.event.ActionListener() {
+        configureCameras.setText("Configure...");
+        configureCameras.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton3ActionPerformed(evt);
+                configureCamerasActionPerformed(evt);
             }
         });
 
@@ -176,53 +177,53 @@ public class ControlView extends javax.swing.JFrame {
 
         jLabel5.setText("Names");
 
-        jList1.setModel(new javax.swing.AbstractListModel() {
+        nameList.setModel(new javax.swing.AbstractListModel() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
             public int getSize() { return strings.length; }
             public Object getElementAt(int i) { return strings[i]; }
         });
-        jScrollPane1.setViewportView(jList1);
+        jScrollPane1.setViewportView(nameList);
 
-        jButton5.setText("Add...");
+        addName.setText("Add...");
 
-        jButton6.setText("Remove");
+        removeName.setText("Remove");
 
-        jButton7.setText("Edit...");
+        editName.setText("Edit...");
 
-        jToggleButton1.setText("Show Selected Name");
+        displayName.setText("Show Selected Name");
 
         jLabel6.setText("Lyrics");
 
-        jList2.setModel(new javax.swing.AbstractListModel() {
+        songList.setModel(new javax.swing.AbstractListModel() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
             public int getSize() { return strings.length; }
             public Object getElementAt(int i) { return strings[i]; }
         });
-        jList2.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+        songList.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
             public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
-                jList2ValueChanged(evt);
+                songListValueChanged(evt);
             }
         });
-        jScrollPane2.setViewportView(jList2);
+        jScrollPane2.setViewportView(songList);
 
-        jButton8.setText("Add...");
-        jButton8.addActionListener(new java.awt.event.ActionListener() {
+        addSong.setText("Add...");
+        addSong.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton8ActionPerformed(evt);
-            }
-        });
-
-        jButton9.setText("Edit...");
-        jButton9.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton9ActionPerformed(evt);
+                addSongActionPerformed(evt);
             }
         });
 
-        jButton10.setText("Remove");
-        jButton10.addActionListener(new java.awt.event.ActionListener() {
+        editSong.setText("Edit...");
+        editSong.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton10ActionPerformed(evt);
+                editSongActionPerformed(evt);
+            }
+        });
+
+        removeSong.setText("Remove");
+        removeSong.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                removeSongActionPerformed(evt);
             }
         });
 
@@ -233,10 +234,11 @@ public class ControlView extends javax.swing.JFrame {
             }
         });
 
-        jButton4.setText("Next Line");
-        jButton4.addActionListener(new java.awt.event.ActionListener() {
+        advanceLyrics.setText("Next Line");
+        advanceLyrics.setEnabled(false);
+        advanceLyrics.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton4ActionPerformed(evt);
+                advanceLyricsActionPerformed(evt);
             }
         });
 
@@ -249,25 +251,25 @@ public class ControlView extends javax.swing.JFrame {
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addComponent(jButton5)
+                        .addComponent(addName)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton7)
+                        .addComponent(editName)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jButton6))
-                    .addComponent(jToggleButton1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(removeName))
+                    .addComponent(displayName, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addComponent(jButton8)
+                        .addComponent(addSong)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton9)
+                        .addComponent(editSong)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jButton10))
+                        .addComponent(removeSong))
                     .addComponent(jLabel6)
                     .addComponent(jLabel5)
                     .addGroup(jPanel2Layout.createSequentialGroup()
                         .addComponent(showLyrics)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton4)))
+                        .addComponent(advanceLyrics)))
                 .addContainerGap())
         );
         jPanel2Layout.setVerticalGroup(
@@ -279,24 +281,24 @@ public class ControlView extends javax.swing.JFrame {
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 135, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton5)
-                    .addComponent(jButton6)
-                    .addComponent(jButton7))
+                    .addComponent(addName)
+                    .addComponent(removeName)
+                    .addComponent(editName))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jToggleButton1)
+                .addComponent(displayName)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel6)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 121, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton8)
-                    .addComponent(jButton9)
-                    .addComponent(jButton10))
+                    .addComponent(addSong)
+                    .addComponent(editSong)
+                    .addComponent(removeSong))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(showLyrics)
-                    .addComponent(jButton4))
+                    .addComponent(advanceLyrics))
                 .addContainerGap())
         );
 
@@ -307,7 +309,7 @@ public class ControlView extends javax.swing.JFrame {
             }
         });
 
-        displayVideo.setText("Play Selected Video");
+        displayVideo.setText("Play Selected Videos");
         displayVideo.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 displayVideoActionPerformed(evt);
@@ -319,19 +321,21 @@ public class ControlView extends javax.swing.JFrame {
         inputPreviews.setLayout(null);
         jScrollPane3.setViewportView(inputPreviews);
 
-        jButton11.setText("Save settings...");
-        jButton11.addActionListener(new java.awt.event.ActionListener() {
+        saveSettings.setText("Save settings...");
+        saveSettings.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton11ActionPerformed(evt);
+                saveSettingsActionPerformed(evt);
             }
         });
 
-        jButton12.setText("Load Settings...");
-        jButton12.addActionListener(new java.awt.event.ActionListener() {
+        loadSettings.setText("Load Settings...");
+        loadSettings.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton12ActionPerformed(evt);
+                loadSettingsActionPerformed(evt);
             }
         });
+
+        loopVideos.setText("Loop Selected Videos");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -341,7 +345,7 @@ public class ControlView extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                        .addComponent(jButton3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(configureCameras, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addGroup(layout.createSequentialGroup()
                             .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 144, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addGap(0, 18, Short.MAX_VALUE))
@@ -356,9 +360,12 @@ public class ControlView extends javax.swing.JFrame {
                             .addComponent(displayVideo, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                     .addGroup(layout.createSequentialGroup()
                         .addGap(10, 10, 10)
-                        .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 79, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 75, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(loopVideos, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(addVideos, javax.swing.GroupLayout.PREFERRED_SIZE, 79, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(removeVideos, javax.swing.GroupLayout.PREFERRED_SIZE, 75, javax.swing.GroupLayout.PREFERRED_SIZE)))))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -366,9 +373,9 @@ public class ControlView extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(jButton11)
+                        .addComponent(saveSettings)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jButton12))
+                        .addComponent(loadSettings))
                     .addComponent(outputContainer, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jLabel2)
@@ -388,13 +395,16 @@ public class ControlView extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(jScrollPane3))
+                            .addComponent(jScrollPane3)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(loopVideos)))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(jButton3)
-                            .addComponent(jButton1)
-                            .addComponent(jButton2))
+                            .addComponent(configureCameras)
+                            .addComponent(addVideos)
+                            .addComponent(removeVideos))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(displayCamera)
@@ -402,17 +412,17 @@ public class ControlView extends javax.swing.JFrame {
                     .addComponent(jPanel2, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
                         .addComponent(outputContainer, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addGap(64, 64, 64)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(jButton12)
-                            .addComponent(jButton11))))
+                            .addComponent(loadSettings)
+                            .addComponent(saveSettings))))
                 .addContainerGap())
         );
 
         setBounds(0, 0, 883, 518);
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
+    private void configureCamerasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_configureCamerasActionPerformed
         if (displayCamera.isSelected()) {
             displayCamera.setSelected(false);
             updatePreview();
@@ -447,13 +457,13 @@ public class ControlView extends javax.swing.JFrame {
             preview.setLocation(0, 125 * index++);
             inputPreviews.add(preview);
         }
-    }//GEN-LAST:event_jButton3ActionPerformed
+    }//GEN-LAST:event_configureCamerasActionPerformed
 
     private void displayCameraActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_displayCameraActionPerformed
         updatePreview();
     }//GEN-LAST:event_displayCameraActionPerformed
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+    private void addVideosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addVideosActionPerformed
         JFileChooser fc = new JFileChooser();
         fc.setMultiSelectionEnabled(true);
         int closeAction = fc.showOpenDialog(this);
@@ -462,52 +472,54 @@ public class ControlView extends javax.swing.JFrame {
                 videoListModel.addElement(new DisplayFile(file.getAbsolutePath()));
             }
         }
-    }//GEN-LAST:event_jButton1ActionPerformed
+    }//GEN-LAST:event_addVideosActionPerformed
 
-    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        if (jList3.getSelectedIndex() >= 0) {
-            videoListModel.removeElementAt(jList3.getSelectedIndex());
+    private void removeVideosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeVideosActionPerformed
+        int[] indices = videoList.getSelectedIndices();
+        File[] elements = new File[indices.length];
+        for (int i = 0; i < indices.length; i++) {
+            elements[i] = videoListModel.getElementAt(indices[i]);
         }
-    }//GEN-LAST:event_jButton2ActionPerformed
+        for (File element : elements) {
+            videoListModel.removeElement(element);
+        }
+    }//GEN-LAST:event_removeVideosActionPerformed
 
     private void displayVideoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_displayVideoActionPerformed
-        if (jList3.getSelectedIndex() >= 0) {
-            selectedVideo = videoListModel.getElementAt(jList3.getSelectedIndex());
-        }
         updatePreview();
     }//GEN-LAST:event_displayVideoActionPerformed
 
-    private void jButton8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed
+    private void addSongActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addSongActionPerformed
         Lyrics lyrics = new Lyrics();
         new LyricsEditor(lyrics, () -> {
             lyricsListModel.addElement(lyrics);
         }).setVisible(true);
-    }//GEN-LAST:event_jButton8ActionPerformed
+    }//GEN-LAST:event_addSongActionPerformed
 
-    private void jButton9ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton9ActionPerformed
+    private void editSongActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_editSongActionPerformed
         if (selectedLyrics != null) {
             new LyricsEditor(selectedLyrics, null).setVisible(true);
         }
-    }//GEN-LAST:event_jButton9ActionPerformed
+    }//GEN-LAST:event_editSongActionPerformed
 
-    private void jList2ValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_jList2ValueChanged
-        if (jList2.getSelectedIndex() >= 0) {
-            selectedLyrics = lyricsListModel.elementAt(jList2.getSelectedIndex());
+    private void songListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_songListValueChanged
+        if (songList.getSelectedIndex() >= 0) {
+            selectedLyrics = lyricsListModel.elementAt(songList.getSelectedIndex());
         }
-    }//GEN-LAST:event_jList2ValueChanged
+    }//GEN-LAST:event_songListValueChanged
 
-    private void jButton10ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton10ActionPerformed
+    private void removeSongActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeSongActionPerformed
         if (selectedLyrics != null) {
             lyricsListModel.removeElement(selectedLyrics);
         }
         selectedLyrics = null;
-    }//GEN-LAST:event_jButton10ActionPerformed
+    }//GEN-LAST:event_removeSongActionPerformed
 
-    private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
+    private void advanceLyricsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_advanceLyricsActionPerformed
         if (activeLyrics != null) {
             activeLyrics.advance();
         }
-    }//GEN-LAST:event_jButton4ActionPerformed
+    }//GEN-LAST:event_advanceLyricsActionPerformed
 
     private void showLyricsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_showLyricsActionPerformed
         if (showLyrics.isSelected()) {
@@ -519,34 +531,27 @@ public class ControlView extends javax.swing.JFrame {
         source.setOverlay(activeLyrics);
     }//GEN-LAST:event_showLyricsActionPerformed
 
-    private void jList3ValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_jList3ValueChanged
-        File newVideo = selectedVideo;
-        if (jList3.getSelectedIndex() >= 0) {
-            newVideo = videoListModel.getElementAt(jList3.getSelectedIndex());
-        }
-        if (newVideo != selectedVideo) {
-            selectedVideo = newVideo;
-            updatePreview();
-        }
-    }//GEN-LAST:event_jList3ValueChanged
+    private void videoListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_videoListValueChanged
 
-    private void jButton11ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton11ActionPerformed
+    }//GEN-LAST:event_videoListValueChanged
+
+    private void saveSettingsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveSettingsActionPerformed
         JFileChooser saveChooser = new JFileChooser();
         saveChooser.setFileFilter(new FileNameExtensionFilter("Presmedia settings (*.presmedia)", "presmedia"));
         int result = saveChooser.showSaveDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             saveSettingsToFile(saveChooser.getSelectedFile());
         }
-    }//GEN-LAST:event_jButton11ActionPerformed
+    }//GEN-LAST:event_saveSettingsActionPerformed
 
-    private void jButton12ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton12ActionPerformed
+    private void loadSettingsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loadSettingsActionPerformed
         JFileChooser openChooser = new JFileChooser();
         openChooser.setFileFilter(new FileNameExtensionFilter("Presmedia settings (*.presmedia)", "presmedia"));
         int result = openChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             loadSettingsFromFile(openChooser.getSelectedFile());
         }
-    }//GEN-LAST:event_jButton12ActionPerformed
+    }//GEN-LAST:event_loadSettingsActionPerformed
 
     /**
      * @param args the command line arguments
@@ -585,48 +590,74 @@ public class ControlView extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton addName;
+    private javax.swing.JButton addSong;
+    private javax.swing.JButton addVideos;
+    private javax.swing.JButton advanceLyrics;
+    private javax.swing.JButton configureCameras;
     private javax.swing.JToggleButton displayCamera;
+    private javax.swing.JToggleButton displayName;
     private javax.swing.JToggleButton displayVideo;
+    private javax.swing.JButton editName;
+    private javax.swing.JButton editSong;
     private javax.swing.JPanel inputPreviews;
-    private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton10;
-    private javax.swing.JButton jButton11;
-    private javax.swing.JButton jButton12;
-    private javax.swing.JButton jButton2;
-    private javax.swing.JButton jButton3;
-    private javax.swing.JButton jButton4;
-    private javax.swing.JButton jButton5;
-    private javax.swing.JButton jButton6;
-    private javax.swing.JButton jButton7;
-    private javax.swing.JButton jButton8;
-    private javax.swing.JButton jButton9;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
-    private javax.swing.JList jList1;
-    private javax.swing.JList jList2;
-    private javax.swing.JList jList3;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JScrollPane jScrollPane4;
-    private javax.swing.JToggleButton jToggleButton1;
+    private javax.swing.JButton loadSettings;
+    private javax.swing.JCheckBox loopVideos;
+    private javax.swing.JList nameList;
     private javax.swing.JPanel outputContainer;
+    private javax.swing.JButton removeName;
+    private javax.swing.JButton removeSong;
+    private javax.swing.JButton removeVideos;
+    private javax.swing.JButton saveSettings;
     private javax.swing.JToggleButton showLyrics;
+    private javax.swing.JList songList;
+    private javax.swing.JList videoList;
     // End of variables declaration//GEN-END:variables
 
     private void updatePreview() {
         try {
-            if (displayVideo.isSelected() && selectedVideo != null) {
-                source.setDelegate(new Video(selectedVideo.getAbsolutePath(), () -> {
-                    displayVideo.setSelected(false);
-                    updatePreview();
-                }));
+            loopVideos.setEnabled(!displayVideo.isSelected());
+            advanceLyrics.setEnabled(showLyrics.isSelected());
+            if (displayVideo.isSelected()) {
+                List<File> selectedVideos = videoList.getSelectedValuesList();
+                Runnable callback = new Runnable() {
+                    int videoIndex = 0;
+
+                    @Override
+                    public void run() {
+                        try {
+                            videoIndex++;
+                            if (videoIndex >= selectedVideos.size()) {
+                                if (loopVideos.isSelected()) {
+                                    videoIndex = 0;
+                                } else {
+                                    displayVideo.setSelected(false);
+                                    updatePreview();
+                                    return;
+                                }
+                            }
+                            source.setDelegate(new Video(selectedVideos.get(videoIndex).getAbsolutePath(), this));
+                        } catch (FrameGrabber.Exception ex) {
+                            ex.printStackTrace();
+                            source.setDelegate(new ColorSource());
+                        }
+                    }
+                };
+                if (!selectedVideos.isEmpty()) {
+                    source.setDelegate(new Video(selectedVideos.get(0).getAbsolutePath(), callback));
+                }
             } else if (displayCamera.isSelected() && selectedCamera != null) {
                 source.setDelegate(selectedCamera);
             } else {
