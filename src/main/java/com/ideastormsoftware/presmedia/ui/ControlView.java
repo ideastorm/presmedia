@@ -5,7 +5,7 @@ import com.ideastormsoftware.presmedia.filters.Lyrics;
 import com.ideastormsoftware.presmedia.sources.Camera;
 import com.ideastormsoftware.presmedia.sources.ColorSource;
 import com.ideastormsoftware.presmedia.sources.CrossFadeProxySource;
-import com.ideastormsoftware.presmedia.sources.Video;
+import com.ideastormsoftware.presmedia.sources.Media;
 import com.ideastormsoftware.presmedia.util.DisplayFile;
 import java.awt.Color;
 import java.awt.event.MouseAdapter;
@@ -148,7 +148,7 @@ public class ControlView extends javax.swing.JFrame {
 
         jLabel1.setText("Live Inputs");
 
-        jLabel3.setText("Videos");
+        jLabel3.setText("Media Files");
 
         addVideos.setText("Add...");
         addVideos.addActionListener(new java.awt.event.ActionListener() {
@@ -309,7 +309,7 @@ public class ControlView extends javax.swing.JFrame {
             }
         });
 
-        displayVideo.setText("Play Selected Videos");
+        displayVideo.setText("Play Selected Media Files");
         displayVideo.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 displayVideoActionPerformed(evt);
@@ -335,7 +335,7 @@ public class ControlView extends javax.swing.JFrame {
             }
         });
 
-        loopVideos.setText("Loop Selected Videos");
+        loopVideos.setText("Loop Selected Media Files");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -648,7 +648,7 @@ public class ControlView extends javax.swing.JFrame {
                                     return;
                                 }
                             }
-                            source.setDelegate(new Video(selectedVideos.get(videoIndex).getAbsolutePath(), this));
+                            source.setDelegate(new Media(selectedVideos.get(videoIndex).getAbsolutePath(), this));
                         } catch (FrameGrabber.Exception ex) {
                             ex.printStackTrace();
                             source.setDelegate(new ColorSource());
@@ -656,7 +656,7 @@ public class ControlView extends javax.swing.JFrame {
                     }
                 };
                 if (!selectedVideos.isEmpty()) {
-                    source.setDelegate(new Video(selectedVideos.get(0).getAbsolutePath(), callback));
+                    source.setDelegate(new Media(selectedVideos.get(0).getAbsolutePath(), callback));
                 }
             } else if (displayCamera.isSelected() && selectedCamera != null) {
                 source.setDelegate(selectedCamera);

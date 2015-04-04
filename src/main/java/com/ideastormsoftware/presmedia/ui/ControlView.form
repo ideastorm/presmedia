@@ -202,7 +202,7 @@
     </Component>
     <Component class="javax.swing.JLabel" name="jLabel3">
       <Properties>
-        <Property name="text" type="java.lang.String" value="Videos"/>
+        <Property name="text" type="java.lang.String" value="Media Files"/>
       </Properties>
     </Component>
     <Component class="javax.swing.JButton" name="addVideos">
@@ -446,7 +446,7 @@
     </Component>
     <Component class="javax.swing.JToggleButton" name="displayVideo">
       <Properties>
-        <Property name="text" type="java.lang.String" value="Play Selected Videos"/>
+        <Property name="text" type="java.lang.String" value="Play Selected Media Files"/>
       </Properties>
       <Events>
         <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="displayVideoActionPerformed"/>
@@ -491,7 +491,7 @@
     </Component>
     <Component class="javax.swing.JCheckBox" name="loopVideos">
       <Properties>
-        <Property name="text" type="java.lang.String" value="Loop Selected Videos"/>
+        <Property name="text" type="java.lang.String" value="Loop Selected Media Files"/>
       </Properties>
     </Component>
   </SubComponents>

@@ -19,12 +19,12 @@ public class CrossFadeProxySource extends ImageSource implements ScaledSource {
     }
 
     public void setDelegate(ImageSource delegate) {
-        if (this.delegate instanceof Video) {
-            ((Video) this.delegate).stop();
+        if (this.delegate instanceof Media) {
+            ((Media) this.delegate).stop();
         }
 
-        if (delegate instanceof Video) {
-            ((Video) delegate).start();
+        if (delegate instanceof Media) {
+            ((Media) delegate).start();
         }
         if (fadeIntoDelegate != null) {
             this.delegate = fadeIntoDelegate;
@@ -33,11 +33,11 @@ public class CrossFadeProxySource extends ImageSource implements ScaledSource {
     }
 
     public void setDelegateNoFade(ImageSource delegate) {
-        if (this.delegate instanceof Video) {
-            ((Video) this.delegate).stop();
+        if (this.delegate instanceof Media) {
+            ((Media) this.delegate).stop();
         }
-        if (delegate instanceof Video) {
-            ((Video) delegate).start();
+        if (delegate instanceof Media) {
+            ((Media) delegate).start();
         }
         this.delegate = delegate;
         fadeIntoDelegate = null;
