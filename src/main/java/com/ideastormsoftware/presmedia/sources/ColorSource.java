@@ -1,6 +1,6 @@
 package com.ideastormsoftware.presmedia.sources;
 
-import com.ideastormsoftware.presmedia.ImageUtils;
+import com.ideastormsoftware.presmedia.util.ImageUtils;
 import com.ideastormsoftware.presmedia.util.ColorUtil;
 import java.awt.AlphaComposite;
 import java.awt.Color;

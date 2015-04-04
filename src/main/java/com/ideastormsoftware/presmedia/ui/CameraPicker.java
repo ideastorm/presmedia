@@ -1,6 +1,7 @@
 package com.ideastormsoftware.presmedia.ui;
 
 import com.ideastormsoftware.presmedia.sources.Camera;
+import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Insets;
@@ -10,7 +11,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import javax.swing.JDialog;
@@ -116,7 +116,7 @@ public class CameraPicker extends JDialog {
                     break layoutLoop;
                 }
                 final Camera camera = new Camera(cameraIndex);
-                final RenderPane pane = new RenderPane(camera);
+                final RenderPane pane = new RenderPane(ImageUtils.scaleSource(camera));
                 pane.setName(Integer.toString(cameraIndex++));
                 pane.setBorder(new LineBorder(Color.black, 3));
                 pane.addMouseListener(new MouseAdapter() {

@@ -1,6 +1,6 @@
 package com.ideastormsoftware.presmedia.sources;
 
-import com.ideastormsoftware.presmedia.ImageUtils;
+import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.image.BufferedImage;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;

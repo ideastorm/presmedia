@@ -1,5 +1,6 @@
 package com.ideastormsoftware.presmedia.ui;
 
+import com.ideastormsoftware.presmedia.util.ImageUtils;
 import com.ideastormsoftware.presmedia.filters.Lyrics;
 import com.ideastormsoftware.presmedia.sources.Camera;
 import com.ideastormsoftware.presmedia.sources.ColorSource;
@@ -15,6 +16,7 @@ import javax.swing.DefaultListModel;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.border.LineBorder;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.FrameGrabber;
 import org.opencv.core.Core;
@@ -35,9 +37,9 @@ public class ControlView extends javax.swing.JFrame {
     private final Projector projector;
     private Camera selectedCamera;
     private RenderPane selectedLiveInput;
-    private DefaultListModel<File> videoListModel;
+    private final DefaultListModel<File> videoListModel;
     private File selectedVideo;
-    private DefaultListModel<Lyrics> lyricsListModel;
+    private final DefaultListModel<Lyrics> lyricsListModel;
     private Lyrics selectedLyrics;
     private Lyrics activeLyrics;
 
@@ -46,10 +48,9 @@ public class ControlView extends javax.swing.JFrame {
      */
     public ControlView() {
         initComponents();
-        projector = new Projector();
-        source = new CrossFadeProxySource(new ColorSource(), projector);
+        source = new CrossFadeProxySource(new ColorSource());
+        projector = new Projector(source);
         RenderPane renderPane = new RenderPane(source);
-        projector.setSource(source);
         outputContainer.add(renderPane);
         videoListModel = new DefaultListModel<>();
         jList3.setModel(videoListModel);
@@ -319,8 +320,18 @@ public class ControlView extends javax.swing.JFrame {
         jScrollPane3.setViewportView(inputPreviews);
 
         jButton11.setText("Save settings...");
+        jButton11.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton11ActionPerformed(evt);
+            }
+        });
 
         jButton12.setText("Load Settings...");
+        jButton12.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton12ActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -415,7 +426,7 @@ public class ControlView extends javax.swing.JFrame {
         int index = 0;
         for (Integer cameraIndex : cameras) {
             final Camera camera = new Camera(cameraIndex);
-            final RenderPane preview = new RenderPane(camera);
+            final RenderPane preview = new RenderPane(ImageUtils.scaleSource(camera));
             preview.setBorder(new LineBorder(Color.black, 2));
             preview.addMouseListener(new MouseAdapter() {
                 @Override
@@ -501,6 +512,7 @@ public class ControlView extends javax.swing.JFrame {
     private void showLyricsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_showLyricsActionPerformed
         if (showLyrics.isSelected()) {
             activeLyrics = selectedLyrics;
+            activeLyrics.reset();
         } else {
             activeLyrics = null;
         }
@@ -517,6 +529,24 @@ public class ControlView extends javax.swing.JFrame {
             updatePreview();
         }
     }//GEN-LAST:event_jList3ValueChanged
+
+    private void jButton11ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton11ActionPerformed
+        JFileChooser saveChooser = new JFileChooser();
+        saveChooser.setFileFilter(new FileNameExtensionFilter("Presmedia settings (*.presmedia)", "presmedia"));
+        int result = saveChooser.showSaveDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            saveSettingsToFile(saveChooser.getSelectedFile());
+        }
+    }//GEN-LAST:event_jButton11ActionPerformed
+
+    private void jButton12ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton12ActionPerformed
+        JFileChooser openChooser = new JFileChooser();
+        openChooser.setFileFilter(new FileNameExtensionFilter("Presmedia settings (*.presmedia)", "presmedia"));
+        int result = openChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            loadSettingsFromFile(openChooser.getSelectedFile());
+        }
+    }//GEN-LAST:event_jButton12ActionPerformed
 
     /**
      * @param args the command line arguments
@@ -606,5 +636,13 @@ public class ControlView extends javax.swing.JFrame {
             e.printStackTrace();
             source.setDelegate(new ColorSource());
         }
+    }
+
+    private void saveSettingsToFile(File selectedFile) {
+        new Settings(videoListModel, lyricsListModel).saveToFile(selectedFile);
+    }
+
+    private void loadSettingsFromFile(File selectedFile) {
+        new Settings(videoListModel, lyricsListModel).loadFromFile(selectedFile);
     }
 }

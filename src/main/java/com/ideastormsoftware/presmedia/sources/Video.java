@@ -1,6 +1,6 @@
 package com.ideastormsoftware.presmedia.sources;
 
-import com.ideastormsoftware.presmedia.ImageUtils;
+import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
 import java.nio.Buffer;
@@ -30,7 +30,8 @@ public class Video extends ImageSource {
     private AudioConverter converter;
     private AudioFormat audioFormat;
 
-    private String sourceFile;
+    private final String sourceFile;
+    private final Object imageLock = new Object();
     private BufferedImage currentImage = new BufferedImage(1, 1, BufferedImage.TYPE_3BYTE_BGR);
 
     private static void log(String format, Object... params) {
@@ -66,7 +67,9 @@ public class Video extends ImageSource {
 
     @Override
     public BufferedImage getCurrentImage() {
-        return currentImage;
+        synchronized (imageLock) {
+            return currentImage;
+        }
     }
 
     private void openJavaSound(FrameGrabber grabber) throws FileNotFoundException {
@@ -208,20 +211,30 @@ public class Video extends ImageSource {
                             openJavaSound(ffmpeg);
                             log("sound system initialized");
                             long startTime = System.nanoTime() / 1000;
+                            long expectedInterframe = (long) (900_000 / ffmpeg.getFrameRate());
                             while (!canceled && !interrupted()) {
                                 try {
+                                    long frameStart = System.nanoTime() / 1000;
                                     Frame frame = ffmpeg.grabFrame();
-                                    long targetEnd = (long) (startTime + ffmpeg.getFrameNumber() * 1_000_000 / ffmpeg.getFrameRate());
                                     if (frame != null) {
                                         if (frame.samples != null) {
                                             audioThread.samples.put(converter.prepareSamplesForPlayback(frame.samples));
+                                            continue;
                                         }
                                         if (frame.image != null) {
-                                            currentImage = frame.image.getBufferedImage();
+                                            BufferedImage frameImage = ImageUtils.copy(frame.image.getBufferedImage());
+                                            synchronized (imageLock) {
+                                                currentImage = frameImage;
+                                            }
                                         }
                                     } else {
                                         normalExit = true;
                                         break;
+                                    }
+                                    final long pts = ffmpeg.getTimestamp();
+                                    long targetEnd = (long) (startTime + pts);
+                                    if (Math.abs(targetEnd - frameStart - expectedInterframe) > 0.1 * expectedInterframe) {
+                                        targetEnd = frameStart + expectedInterframe;
                                     }
                                     long delay = targetEnd - System.nanoTime() / 1000;
                                     if (delay > 0) {
@@ -229,7 +242,9 @@ public class Video extends ImageSource {
                                     }
                                 } catch (FrameGrabber.Exception e) {
                                     e.printStackTrace();
-                                    currentImage = ImageUtils.emptyImage();
+                                    synchronized (imageLock) {
+                                        currentImage = ImageUtils.emptyImage();
+                                    }
                                 } catch (InterruptedException ex) {
                                     log("got interrupted");
                                     return;

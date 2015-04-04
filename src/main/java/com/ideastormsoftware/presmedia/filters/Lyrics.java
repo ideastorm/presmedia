@@ -1,6 +1,6 @@
 package com.ideastormsoftware.presmedia.filters;
 
-import com.ideastormsoftware.presmedia.ImageUtils;
+import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -14,7 +14,9 @@ public class Lyrics extends AbstractFilter {
 
     private String title;
     private List<String> lines;
+//    @JsonIgnore
     private int index = 0;
+//    @JsonIgnore
     private long transitionStartTs;
 
     public List<String> getLines() {
@@ -43,14 +45,14 @@ public class Lyrics extends AbstractFilter {
         float delta = (System.currentTimeMillis() - transitionStartTs) / 1000.0f;
         if (delta < 0) {
             return 0;
-        } else if (delta > 0.5) {
-            if (delta < 1) {
+        } else if (delta > 1) {
+            if (delta < 1.5) {
                 transitionStartTs = 0;
                 index++;
             }
             return 0;
         } else {
-            return delta / 0.5f;
+            return delta;
         }
     }
 
@@ -71,7 +73,7 @@ public class Lyrics extends AbstractFilter {
         Font font = Font.decode("Verdana");
         font = font.deriveFont(estimatedCharacterHeight * 72 / 96);
 
-        BufferedImage filtered = ImageUtils.copyAspectScaled(original, targetScreenSize.width, targetScreenSize.height);
+        BufferedImage filtered = ImageUtils.copy(original);
         Graphics2D g = filtered.createGraphics();
         g.setColor(new Color(0, 0, 0, 127));
         g.fillRect(offset / 2, vOffset - offset / 2, shadowWidth, totalHeight + offset / 2);

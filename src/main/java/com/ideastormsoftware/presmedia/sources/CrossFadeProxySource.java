@@ -1,24 +1,21 @@
 package com.ideastormsoftware.presmedia.sources;
 
-import com.ideastormsoftware.presmedia.ImageUtils;
+import com.ideastormsoftware.presmedia.util.ImageUtils;
 import com.ideastormsoftware.presmedia.filters.AbstractFilter;
-import com.ideastormsoftware.presmedia.ui.Projector;
 import java.awt.AlphaComposite;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
-public class CrossFadeProxySource extends ImageSource {
+public class CrossFadeProxySource extends ImageSource implements ScaledSource {
 
     private ImageSource delegate;
     private ImageSource fadeIntoDelegate;
     private static final double fadeDuration = 0.5;
     private long fadeStartTime;
-    private final Projector projector;
 
-    public CrossFadeProxySource(ImageSource delegate, Projector projector) {
+    public CrossFadeProxySource(ImageSource delegate) {
         this.delegate = delegate;
-        this.projector = projector;
     }
 
     public void setDelegate(ImageSource delegate) {
@@ -75,11 +72,10 @@ public class CrossFadeProxySource extends ImageSource {
     }
 
     @Override
-    public BufferedImage getCurrentImage() {
-        Dimension finalSize = projector.getRenderSize();
-        BufferedImage baseImage = delegate.getCurrentImage(finalSize);
+    public BufferedImage getCurrentImage(Dimension finalSize) {
+        BufferedImage baseImage = ImageUtils.scaleSource(delegate).getCurrentImage(finalSize);
         if (fadeIntoDelegate != null) {
-            BufferedImage overlayImage = fadeIntoDelegate.getCurrentImage(finalSize);
+            BufferedImage overlayImage = ImageUtils.scaleSource(fadeIntoDelegate).getCurrentImage(finalSize);
             Graphics2D g = baseImage.createGraphics();
             float alpha = findAlpha();
             if (alpha >= 1) {

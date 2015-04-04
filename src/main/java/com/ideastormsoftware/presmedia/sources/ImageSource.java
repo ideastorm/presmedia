@@ -1,17 +1,13 @@
 package com.ideastormsoftware.presmedia.sources;
 
-import com.ideastormsoftware.presmedia.ImageUtils;
-import java.awt.Dimension;
+import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.image.BufferedImage;
 import javax.swing.JOptionPane;
 
 public abstract class ImageSource {
 
-    public abstract BufferedImage getCurrentImage();
-
-    //Override point for filters
-    public BufferedImage getCurrentImage(Dimension size) {
-        return ImageUtils.copyAspectScaled(getCurrentImage(), size.width, size.height);
+    public BufferedImage getCurrentImage() {
+        return ImageUtils.emptyImage();
     }
 
     protected void warn(String title, String format, Object... items) {
