@@ -47,8 +47,9 @@ public final class ImageUtils {
     }
 
     public static BufferedImage copyAspectScaled(BufferedImage img, int width, int height) {
-        if (img.getWidth() == width && img.getHeight() == height)
+        if (img.getWidth() == width && img.getHeight() == height) {
             return img;
+        }
         BufferedImage copy = new BufferedImage(width, height, img.getType());
         Graphics2D g = copy.createGraphics();
         drawAspectScaled(g, img, width, height);
@@ -59,11 +60,14 @@ public final class ImageUtils {
         return new BufferedImage(320, 240, BufferedImage.TYPE_4BYTE_ABGR);
     }
 
-    public static BufferedImage copyAspectScaled(BufferedImage img, Dimension size)
-    {
+    public static BufferedImage copyAspectScaled(BufferedImage img, Dimension size) {
         return copyAspectScaled(img, size.width, size.height);
     }
-    
+
+    public static void drawAspectScaled(Graphics2D g, BufferedImage img, Dimension size) {
+        drawAspectScaled(g, img, size.width, size.height);
+    }
+
     public static void drawAspectScaled(Graphics2D g, BufferedImage img, int width, int height) {
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         g.setColor(Color.black);
@@ -74,8 +78,9 @@ public final class ImageUtils {
     }
 
     public static ScaledSource scaleSource(final ImageSource source) {
-        if (source instanceof ScaledSource)
+        if (source instanceof ScaledSource) {
             return (ScaledSource) source;
+        }
         return (Dimension size) -> copyAspectScaled(source.getCurrentImage(), size);
     }
 

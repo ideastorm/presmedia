@@ -2,6 +2,7 @@ package com.ideastormsoftware.presmedia.ui;
 
 import com.ideastormsoftware.presmedia.util.ImageUtils;
 import com.ideastormsoftware.presmedia.filters.Lyrics;
+import com.ideastormsoftware.presmedia.filters.Slideshow;
 import com.ideastormsoftware.presmedia.sources.Camera;
 import com.ideastormsoftware.presmedia.sources.ColorSource;
 import com.ideastormsoftware.presmedia.sources.CrossFadeProxySource;
@@ -39,9 +40,11 @@ public class ControlView extends javax.swing.JFrame {
     private Camera selectedCamera;
     private RenderPane selectedLiveInput;
     private final DefaultListModel<File> videoListModel;
+    private final DefaultListModel<Slideshow> slideListModel;
     private final DefaultListModel<Lyrics> lyricsListModel;
     private Lyrics selectedLyrics;
     private Lyrics activeLyrics;
+    private Slideshow selectedSlides;
 
     /**
      * Creates new form ControlView
@@ -56,7 +59,8 @@ public class ControlView extends javax.swing.JFrame {
         videoList.setModel(videoListModel);
         lyricsListModel = new DefaultListModel<>();
         songList.setModel(lyricsListModel);
-
+        slideListModel = new DefaultListModel<>();
+        slideList.setModel(slideListModel);
     }
 
     @Override
@@ -105,6 +109,13 @@ public class ControlView extends javax.swing.JFrame {
         removeSong = new javax.swing.JButton();
         showLyrics = new javax.swing.JToggleButton();
         advanceLyrics = new javax.swing.JButton();
+        jScrollPane5 = new javax.swing.JScrollPane();
+        slideList = new javax.swing.JList();
+        jLabel7 = new javax.swing.JLabel();
+        showSlides = new javax.swing.JToggleButton();
+        addSlideshow = new javax.swing.JButton();
+        editSlideshow = new javax.swing.JButton();
+        removeSlideshow = new javax.swing.JButton();
         displayCamera = new javax.swing.JToggleButton();
         displayVideo = new javax.swing.JToggleButton();
         jScrollPane3 = new javax.swing.JScrollPane();
@@ -182,6 +193,7 @@ public class ControlView extends javax.swing.JFrame {
             public int getSize() { return strings.length; }
             public Object getElementAt(int i) { return strings[i]; }
         });
+        nameList.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         jScrollPane1.setViewportView(nameList);
 
         addName.setText("Add...");
@@ -199,6 +211,7 @@ public class ControlView extends javax.swing.JFrame {
             public int getSize() { return strings.length; }
             public Object getElementAt(int i) { return strings[i]; }
         });
+        songList.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         songList.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
             public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
                 songListValueChanged(evt);
@@ -242,6 +255,49 @@ public class ControlView extends javax.swing.JFrame {
             }
         });
 
+        slideList.setModel(new javax.swing.AbstractListModel() {
+            String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
+            public int getSize() { return strings.length; }
+            public Object getElementAt(int i) { return strings[i]; }
+        });
+        slideList.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        slideList.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+            public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
+                slideListValueChanged(evt);
+            }
+        });
+        jScrollPane5.setViewportView(slideList);
+
+        jLabel7.setText("Slide shows");
+
+        showSlides.setText("Play Slideshow");
+        showSlides.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                showSlidesActionPerformed(evt);
+            }
+        });
+
+        addSlideshow.setText("Add...");
+        addSlideshow.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                addSlideshowActionPerformed(evt);
+            }
+        });
+
+        editSlideshow.setText("Edit...");
+        editSlideshow.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                editSlideshowActionPerformed(evt);
+            }
+        });
+
+        removeSlideshow.setText("Remove");
+        removeSlideshow.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                removeSlideshowActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
@@ -249,7 +305,7 @@ public class ControlView extends javax.swing.JFrame {
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jScrollPane1)
                     .addGroup(jPanel2Layout.createSequentialGroup()
                         .addComponent(addName)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -257,28 +313,40 @@ public class ControlView extends javax.swing.JFrame {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(removeName))
                     .addComponent(displayName, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jScrollPane2)
                     .addGroup(jPanel2Layout.createSequentialGroup()
                         .addComponent(addSong)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(editSong)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(removeSong))
-                    .addComponent(jLabel6)
-                    .addComponent(jLabel5)
+                    .addComponent(showSlides, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addComponent(showLyrics)
+                        .addComponent(addSlideshow)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(advanceLyrics)))
+                        .addComponent(editSlideshow)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(removeSlideshow))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jScrollPane5, javax.swing.GroupLayout.PREFERRED_SIZE, 212, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel6)
+                            .addComponent(jLabel5)
+                            .addGroup(jPanel2Layout.createSequentialGroup()
+                                .addComponent(showLyrics)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(advanceLyrics))
+                            .addComponent(jLabel7))
+                        .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
-                .addGap(6, 6, 6)
+                .addContainerGap()
                 .addComponent(jLabel5)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 135, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jScrollPane1)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(addName)
@@ -289,7 +357,7 @@ public class ControlView extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel6)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 121, Short.MAX_VALUE)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 91, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(addSong)
@@ -299,6 +367,17 @@ public class ControlView extends javax.swing.JFrame {
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(showLyrics)
                     .addComponent(advanceLyrics))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jLabel7)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane5, javax.swing.GroupLayout.PREFERRED_SIZE, 93, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(addSlideshow)
+                    .addComponent(editSlideshow)
+                    .addComponent(removeSlideshow))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(showSlides)
                 .addContainerGap())
         );
 
@@ -373,8 +452,9 @@ public class ControlView extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
+                        .addGap(0, 84, Short.MAX_VALUE)
                         .addComponent(saveSettings)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(loadSettings))
                     .addComponent(outputContainer, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
@@ -419,7 +499,7 @@ public class ControlView extends javax.swing.JFrame {
                 .addContainerGap())
         );
 
-        setBounds(0, 0, 883, 518);
+        setBounds(0, 0, 967, 670);
     }// </editor-fold>//GEN-END:initComponents
 
     private void configureCamerasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_configureCamerasActionPerformed
@@ -553,6 +633,40 @@ public class ControlView extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_loadSettingsActionPerformed
 
+    private void addSlideshowActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addSlideshowActionPerformed
+        Slideshow newShow = new Slideshow();
+        new SlideshowEditor(newShow, () -> {
+            slideListModel.addElement(newShow);
+        }).setVisible(true);
+    }//GEN-LAST:event_addSlideshowActionPerformed
+
+    private void editSlideshowActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_editSlideshowActionPerformed
+        if (slideList.getSelectedIndex() >= 0) {
+            new SlideshowEditor(slideListModel.get(slideList.getSelectedIndex()), null).setVisible(true);
+        }
+    }//GEN-LAST:event_editSlideshowActionPerformed
+
+    private void removeSlideshowActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeSlideshowActionPerformed
+        if (slideList.getSelectedIndex() >= 0) {
+            slideListModel.removeElementAt(slideList.getSelectedIndex());
+        }
+    }//GEN-LAST:event_removeSlideshowActionPerformed
+
+    private void showSlidesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_showSlidesActionPerformed
+        if (showSlides.isSelected()) {
+            source.setOverlay(selectedSlides);
+        } else {
+            source.setOverlay(null);
+        }
+
+    }//GEN-LAST:event_showSlidesActionPerformed
+
+    private void slideListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_slideListValueChanged
+        if (slideList.getSelectedIndex() >= 0) {
+            selectedSlides = slideListModel.getElementAt(slideList.getSelectedIndex());
+        }
+    }//GEN-LAST:event_slideListValueChanged
+
     /**
      * @param args the command line arguments
      */
@@ -591,6 +705,7 @@ public class ControlView extends javax.swing.JFrame {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton addName;
+    private javax.swing.JButton addSlideshow;
     private javax.swing.JButton addSong;
     private javax.swing.JButton addVideos;
     private javax.swing.JButton advanceLyrics;
@@ -599,6 +714,7 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JToggleButton displayName;
     private javax.swing.JToggleButton displayVideo;
     private javax.swing.JButton editName;
+    private javax.swing.JButton editSlideshow;
     private javax.swing.JButton editSong;
     private javax.swing.JPanel inputPreviews;
     private javax.swing.JLabel jLabel1;
@@ -607,21 +723,26 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JScrollPane jScrollPane4;
+    private javax.swing.JScrollPane jScrollPane5;
     private javax.swing.JButton loadSettings;
     private javax.swing.JCheckBox loopVideos;
     private javax.swing.JList nameList;
     private javax.swing.JPanel outputContainer;
     private javax.swing.JButton removeName;
+    private javax.swing.JButton removeSlideshow;
     private javax.swing.JButton removeSong;
     private javax.swing.JButton removeVideos;
     private javax.swing.JButton saveSettings;
     private javax.swing.JToggleButton showLyrics;
+    private javax.swing.JToggleButton showSlides;
+    private javax.swing.JList slideList;
     private javax.swing.JList songList;
     private javax.swing.JList videoList;
     // End of variables declaration//GEN-END:variables
