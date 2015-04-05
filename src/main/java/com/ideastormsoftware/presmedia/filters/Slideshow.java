@@ -12,7 +12,6 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 import javax.imageio.ImageIO;
-import org.codehaus.jackson.annotate.JsonIgnore;
 
 public class Slideshow extends AbstractFilter {
 
@@ -21,16 +20,12 @@ public class Slideshow extends AbstractFilter {
 
     private List<File> files = Collections.EMPTY_LIST;
     private String title = "";
-    @JsonIgnore
-    private int index = -1;
-    @JsonIgnore
-    private long lastTransition = 0;
-    @JsonIgnore
-    private BufferedImage lastImage = ImageUtils.emptyImage();
-    @JsonIgnore
-    private BufferedImage fadeImage;
-    private final List<File> unseenImages = new ArrayList<>();
     private boolean randomize;
+    private transient int index = -1;
+    private transient long lastTransition = 0;
+    private transient BufferedImage lastImage = ImageUtils.emptyImage();
+    private transient BufferedImage fadeImage;
+    private transient final List<File> unseenImages = new ArrayList<>();
 
     private File pickRandomFile() {
         if (unseenImages.isEmpty()) {

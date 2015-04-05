@@ -791,10 +791,10 @@ public class ControlView extends javax.swing.JFrame {
     }
 
     private void saveSettingsToFile(File selectedFile) {
-        new Settings(videoListModel, lyricsListModel).saveToFile(selectedFile);
+        new Settings(videoListModel, lyricsListModel, slideListModel).saveToFile(selectedFile);
     }
 
     private void loadSettingsFromFile(File selectedFile) {
-        new Settings(videoListModel, lyricsListModel).loadFromFile(selectedFile);
+        new Settings(videoListModel, lyricsListModel, slideListModel).loadFromFile(selectedFile);
     }
 }

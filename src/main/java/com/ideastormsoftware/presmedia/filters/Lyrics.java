@@ -9,16 +9,13 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.util.List;
-import org.codehaus.jackson.annotate.JsonIgnore;
 
 public class Lyrics extends AbstractFilter {
 
     private String title;
     private List<String> lines;
-    @JsonIgnore
-    private int index = 0;
-    @JsonIgnore
-    private long transitionStartTs;
+    private transient int index = 0;
+    private transient long transitionStartTs;
 
     public List<String> getLines() {
         return lines;

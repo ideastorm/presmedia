@@ -41,7 +41,8 @@ public class SlideshowEditor extends javax.swing.JFrame {
         remove = new javax.swing.JButton();
         randomize = new javax.swing.JCheckBox();
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+        setTitle("Slideshow Editor");
 
         jLabel1.setText("Title");
 
