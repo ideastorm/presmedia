@@ -16,8 +16,6 @@ import javax.imageio.ImageIO;
 
 public class Slideshow extends AbstractFilter {
 
-    private static final float FADE_DELAY = 1000.0f;
-
     private List<File> files = Collections.EMPTY_LIST;
     private String title = "";
     private boolean randomize;
@@ -27,6 +25,10 @@ public class Slideshow extends AbstractFilter {
     private transient BufferedImage lastImage = ImageUtils.emptyImage();
     private transient BufferedImage fadeImage;
     private transient final List<File> unseenImages = new ArrayList<>();
+
+    private void log(String format, Object... params) {
+        System.out.printf(format + "\n", params);
+    }
 
     private File pickRandomFile() {
         if (unseenImages.isEmpty()) {
@@ -48,9 +50,13 @@ public class Slideshow extends AbstractFilter {
     protected BufferedImage filter(BufferedImage original, Dimension targetScreenSize) {
         long now = System.currentTimeMillis();
         BufferedImage compositeImage;
+        //if it's time to transition, this will become true
+        //  lastTransition is set to now to break out of the loop once we've
+        //  got a new file to transition to.
         while (now - lastTransition > perSlideDelay) {
             if (files == null || files.isEmpty()) {
                 lastImage = ImageUtils.emptyImage();
+                lastTransition = now;
             } else {
                 File nextFile = randomize ? pickRandomFile() : nextFile();
                 try {
@@ -61,8 +67,9 @@ public class Slideshow extends AbstractFilter {
                 }
             }
         }
-        float alpha = (now - lastTransition) / FADE_DELAY;
-        if (now - lastTransition > FADE_DELAY) {
+        float fadeDelay = perSlideDelay * 0.2f;
+        float alpha = (now - lastTransition) / fadeDelay;
+        if (now - lastTransition > fadeDelay) {
             if (fadeImage != null) {
                 lastImage = fadeImage;
                 fadeImage = null;
@@ -70,9 +77,10 @@ public class Slideshow extends AbstractFilter {
             compositeImage = ImageUtils.copyAspectScaled(lastImage, targetScreenSize);
         } else {
             compositeImage = ImageUtils.copyAspectScaled(lastImage, targetScreenSize);
+            BufferedImage overlayImage = ImageUtils.copyAspectScaled(fadeImage, targetScreenSize);
             Graphics2D g = compositeImage.createGraphics();
             g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-            ImageUtils.drawAspectScaled(g, fadeImage, targetScreenSize);
+            g.drawImage(overlayImage, 0, 0, null);
         }
         return compositeImage;
     }
@@ -84,7 +92,7 @@ public class Slideshow extends AbstractFilter {
     public List<File> getFiles() {
         return files;
     }
-    
+
     public int getSlideDelay() {
         return perSlideDelay;
     }
@@ -104,7 +112,7 @@ public class Slideshow extends AbstractFilter {
     public void setTitle(String title) {
         this.title = title;
     }
-    
+
     public void setSlideDelay(int slideDelay) {
         perSlideDelay = slideDelay;
     }
