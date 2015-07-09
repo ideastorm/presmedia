@@ -20,6 +20,7 @@ public class SlideshowEditor extends javax.swing.JFrame {
         fileList.setModel(fileListModel);
         titleField.setText(slideshow.getTitle());
         randomize.setSelected(slideshow.isRandomize());
+        slideDelayEditor.setValue(slideshow.getSlideDelay()*0.001);
         for (File file : slideshow.getFiles()) {
             fileListModel.addElement(new DisplayFile(file.getAbsolutePath()));
         }
@@ -40,6 +41,8 @@ public class SlideshowEditor extends javax.swing.JFrame {
         addFiles = new javax.swing.JButton();
         remove = new javax.swing.JButton();
         randomize = new javax.swing.JCheckBox();
+        jLabel3 = new javax.swing.JLabel();
+        slideDelayEditor = new javax.swing.JSpinner();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Slideshow Editor");
@@ -85,6 +88,10 @@ public class SlideshowEditor extends javax.swing.JFrame {
 
         randomize.setText("Display images in random order");
 
+        jLabel3.setText("Slide display duration in seconds");
+
+        slideDelayEditor.setModel(new javax.swing.SpinnerNumberModel(Double.valueOf(5.0d), Double.valueOf(0.001d), null, Double.valueOf(0.1d)));
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -92,6 +99,13 @@ public class SlideshowEditor extends javax.swing.JFrame {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 248, Short.MAX_VALUE)
+                            .addComponent(jLabel1)
+                            .addComponent(titleField, javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(jLabel2))
+                        .addGap(0, 0, Short.MAX_VALUE))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                         .addGap(0, 0, Short.MAX_VALUE)
                         .addComponent(saveButton)
@@ -101,14 +115,11 @@ public class SlideshowEditor extends javax.swing.JFrame {
                         .addComponent(addFiles)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(remove))
+                    .addComponent(randomize, javax.swing.GroupLayout.DEFAULT_SIZE, 248, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 248, Short.MAX_VALUE)
-                            .addComponent(jLabel1, javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(titleField)
-                            .addComponent(jLabel2, javax.swing.GroupLayout.Alignment.LEADING))
-                        .addGap(0, 0, Short.MAX_VALUE))
-                    .addComponent(randomize, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 154, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(slideDelayEditor)))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -121,14 +132,18 @@ public class SlideshowEditor extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jLabel2)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 260, Short.MAX_VALUE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 232, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(addFiles)
                     .addComponent(remove))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(randomize)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel3)
+                    .addComponent(slideDelayEditor, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(cancelButton)
                     .addComponent(saveButton))
@@ -167,6 +182,7 @@ public class SlideshowEditor extends javax.swing.JFrame {
         slideshow.setTitle(titleField.getText());
         slideshow.setFiles(fileListModel.elements());
         slideshow.setRandomize(randomize.isSelected());
+        slideshow.setSlideDelay((int) (1000*(Double)slideDelayEditor.getValue()));
         setVisible(false);
         if (callback != null) {
             callback.run();
@@ -179,10 +195,12 @@ public class SlideshowEditor extends javax.swing.JFrame {
     private javax.swing.JList fileList;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JCheckBox randomize;
     private javax.swing.JButton remove;
     private javax.swing.JButton saveButton;
+    private javax.swing.JSpinner slideDelayEditor;
     private javax.swing.JTextField titleField;
     // End of variables declaration//GEN-END:variables
 }

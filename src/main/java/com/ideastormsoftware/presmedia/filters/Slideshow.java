@@ -16,12 +16,12 @@ import javax.imageio.ImageIO;
 
 public class Slideshow extends AbstractFilter {
 
-    private static final int SLIDE_DELAY = 5000;
     private static final float FADE_DELAY = 1000.0f;
 
     private List<File> files = Collections.EMPTY_LIST;
     private String title = "";
     private boolean randomize;
+    private int perSlideDelay = 5000;
     private transient int index = -1;
     private transient long lastTransition = 0;
     private transient BufferedImage lastImage = ImageUtils.emptyImage();
@@ -48,7 +48,7 @@ public class Slideshow extends AbstractFilter {
     protected BufferedImage filter(BufferedImage original, Dimension targetScreenSize) {
         long now = System.currentTimeMillis();
         BufferedImage compositeImage;
-        while (now - lastTransition > SLIDE_DELAY) {
+        while (now - lastTransition > perSlideDelay) {
             if (files == null || files.isEmpty()) {
                 lastImage = ImageUtils.emptyImage();
             } else {
@@ -84,6 +84,10 @@ public class Slideshow extends AbstractFilter {
     public List<File> getFiles() {
         return files;
     }
+    
+    public int getSlideDelay() {
+        return perSlideDelay;
+    }
 
     public void setFiles(List<File> files) {
         this.files = files;
@@ -99,6 +103,10 @@ public class Slideshow extends AbstractFilter {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+    
+    public void setSlideDelay(int slideDelay) {
+        perSlideDelay = slideDelay;
     }
 
     public boolean isRandomize() {

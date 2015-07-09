@@ -13,7 +13,7 @@ public class LyricsEditor extends javax.swing.JFrame {
         this.lyrics = lyrics;
         initComponents();
         titleField.setText(lyrics.getTitle());
-        lyricsField.setText(Joiner.on("\\n").join(lyrics.getLines()));
+        lyricsField.setText(Joiner.on("\n").join(lyrics.getLines()));
         setResizable(false);
         this.callback = callback;
     }

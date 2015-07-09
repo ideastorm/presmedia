@@ -46,17 +46,17 @@
                       <Group type="103" groupAlignment="1" max="-2" attributes="0">
                           <Component id="jPanel1" alignment="0" max="32767" attributes="0"/>
                           <Component id="jLabel3" alignment="0" max="32767" attributes="0"/>
-                          <Component id="displayVideo" alignment="0" max="32767" attributes="0"/>
+                          <Component id="displayMedia" alignment="0" max="32767" attributes="0"/>
                       </Group>
                   </Group>
                   <Group type="102" alignment="0" attributes="0">
                       <EmptySpace min="-2" pref="10" max="-2" attributes="0"/>
                       <Group type="103" groupAlignment="0" attributes="0">
-                          <Component id="loopVideos" max="32767" attributes="0"/>
+                          <Component id="loopMedia" max="32767" attributes="0"/>
                           <Group type="102" attributes="0">
-                              <Component id="addVideos" min="-2" pref="79" max="-2" attributes="0"/>
+                              <Component id="addMedia" min="-2" pref="79" max="-2" attributes="0"/>
                               <EmptySpace max="32767" attributes="0"/>
-                              <Component id="removeVideos" min="-2" pref="75" max="-2" attributes="0"/>
+                              <Component id="removeMedia" min="-2" pref="75" max="-2" attributes="0"/>
                           </Group>
                       </Group>
                   </Group>
@@ -102,19 +102,19 @@
                           <Group type="102" attributes="0">
                               <Component id="jPanel1" max="32767" attributes="0"/>
                               <EmptySpace max="-2" attributes="0"/>
-                              <Component id="loopVideos" min="-2" max="-2" attributes="0"/>
+                              <Component id="loopMedia" min="-2" max="-2" attributes="0"/>
                           </Group>
                       </Group>
                       <EmptySpace max="-2" attributes="0"/>
                       <Group type="103" groupAlignment="3" attributes="0">
                           <Component id="configureCameras" alignment="3" min="-2" max="-2" attributes="0"/>
-                          <Component id="addVideos" alignment="3" min="-2" max="-2" attributes="0"/>
-                          <Component id="removeVideos" alignment="3" min="-2" max="-2" attributes="0"/>
+                          <Component id="addMedia" alignment="3" min="-2" max="-2" attributes="0"/>
+                          <Component id="removeMedia" alignment="3" min="-2" max="-2" attributes="0"/>
                       </Group>
                       <EmptySpace max="-2" attributes="0"/>
                       <Group type="103" groupAlignment="3" attributes="0">
                           <Component id="displayCamera" alignment="3" min="-2" max="-2" attributes="0"/>
-                          <Component id="displayVideo" alignment="3" min="-2" max="-2" attributes="0"/>
+                          <Component id="displayMedia" alignment="3" min="-2" max="-2" attributes="0"/>
                       </Group>
                   </Group>
                   <Component id="jPanel2" alignment="0" max="32767" attributes="0"/>
@@ -176,7 +176,7 @@
 
           <Layout class="org.netbeans.modules.form.compat2.layouts.support.JScrollPaneSupportLayout"/>
           <SubComponents>
-            <Component class="javax.swing.JList" name="videoList">
+            <Component class="javax.swing.JList" name="mediaList">
               <Properties>
                 <Property name="model" type="javax.swing.ListModel" editor="org.netbeans.modules.form.editors2.ListModelEditor">
                   <StringArray count="5">
@@ -189,7 +189,7 @@
                 </Property>
               </Properties>
               <Events>
-                <EventHandler event="valueChanged" listener="javax.swing.event.ListSelectionListener" parameters="javax.swing.event.ListSelectionEvent" handler="videoListValueChanged"/>
+                <EventHandler event="valueChanged" listener="javax.swing.event.ListSelectionListener" parameters="javax.swing.event.ListSelectionEvent" handler="mediaListValueChanged"/>
               </Events>
             </Component>
           </SubComponents>
@@ -206,20 +206,20 @@
         <Property name="text" type="java.lang.String" value="Media Files"/>
       </Properties>
     </Component>
-    <Component class="javax.swing.JButton" name="addVideos">
+    <Component class="javax.swing.JButton" name="addMedia">
       <Properties>
         <Property name="text" type="java.lang.String" value="Add..."/>
       </Properties>
       <Events>
-        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="addVideosActionPerformed"/>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="addMediaActionPerformed"/>
       </Events>
     </Component>
-    <Component class="javax.swing.JButton" name="removeVideos">
+    <Component class="javax.swing.JButton" name="removeMedia">
       <Properties>
         <Property name="text" type="java.lang.String" value="Remove"/>
       </Properties>
       <Events>
-        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="removeVideosActionPerformed"/>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="removeMediaActionPerformed"/>
       </Events>
     </Component>
     <Component class="javax.swing.JButton" name="configureCameras">
@@ -537,12 +537,12 @@
         <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="displayCameraActionPerformed"/>
       </Events>
     </Component>
-    <Component class="javax.swing.JToggleButton" name="displayVideo">
+    <Component class="javax.swing.JToggleButton" name="displayMedia">
       <Properties>
         <Property name="text" type="java.lang.String" value="Play Selected Media Files"/>
       </Properties>
       <Events>
-        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="displayVideoActionPerformed"/>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="displayMediaActionPerformed"/>
       </Events>
     </Component>
     <Container class="javax.swing.JScrollPane" name="jScrollPane3">
@@ -582,7 +582,7 @@
         <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="loadSettingsActionPerformed"/>
       </Events>
     </Component>
-    <Component class="javax.swing.JCheckBox" name="loopVideos">
+    <Component class="javax.swing.JCheckBox" name="loopMedia">
       <Properties>
         <Property name="text" type="java.lang.String" value="Loop Selected Media Files"/>
       </Properties>
