@@ -1,11 +1,14 @@
 package com.ideastormsoftware.presmedia.ui;
 
-import com.ideastormsoftware.presmedia.util.ImageUtils;
+import com.ideastormsoftware.cvutils.ui.RenderPane;
+import com.ideastormsoftware.cvutils.ui.Projector;
+import com.ideastormsoftware.cvutils.ui.CameraPicker;
+import com.ideastormsoftware.cvutils.sources.Camera;
+import com.ideastormsoftware.cvutils.sources.ColorSource;
+import com.ideastormsoftware.cvutils.sources.CrossFadeProxySource;
+import com.ideastormsoftware.cvutils.util.ImageUtils;
 import com.ideastormsoftware.presmedia.filters.Lyrics;
 import com.ideastormsoftware.presmedia.filters.Slideshow;
-import com.ideastormsoftware.presmedia.sources.Camera;
-import com.ideastormsoftware.presmedia.sources.ColorSource;
-import com.ideastormsoftware.presmedia.sources.CrossFadeProxySource;
 import com.ideastormsoftware.presmedia.sources.Media;
 import com.ideastormsoftware.presmedia.util.DisplayFile;
 import java.awt.Color;

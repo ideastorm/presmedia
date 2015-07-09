@@ -1,6 +1,8 @@
 package com.ideastormsoftware.presmedia.sources;
 
-import com.ideastormsoftware.presmedia.util.ImageUtils;
+import com.ideastormsoftware.cvutils.sources.ImageSource;
+import com.ideastormsoftware.cvutils.sources.OnDemandSource;
+import com.ideastormsoftware.cvutils.util.ImageUtils;
 import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
 import java.nio.Buffer;
@@ -9,6 +11,8 @@ import java.nio.DoubleBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -24,7 +28,7 @@ import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber;
 
-public class Media extends ImageSource {
+public class Media extends ImageSource implements OnDemandSource {
 
     private SourceDataLine mLine;
     private AudioConverter converter;
@@ -49,6 +53,7 @@ public class Media extends ImageSource {
         return sourceFile;
     }
 
+    @Override
     public void start() {
         try {
             openSourceFile();
@@ -57,6 +62,7 @@ public class Media extends ImageSource {
         }
     }
 
+    @Override
     public void stop() {
         try {
             closeSourceFile();
@@ -194,53 +200,52 @@ public class Media extends ImageSource {
 
         private volatile boolean canceled = false;
         private final String sourceFile;
+        private final BlockingQueue<BufferedImage> frameQueue;
 
         private GrabberThread(String sourceFile) {
+            this.frameQueue = new ArrayBlockingQueue<BufferedImage>(256);
             this.sourceFile = sourceFile;
         }
 
         @Override
         public void run() {
+            log("Media processing thread initialized");
             boolean normalExit = false;
             AudioThread audioThread = new AudioThread();
-            audioThread.start();
+            VideoThread videoThread = new VideoThread();
             try {
                 synchronized (threadLock) {
+                    log("media processing lock acquired");
                     try {
                         FFmpegFrameGrabber ffmpeg = FFmpegFrameGrabber.createDefault(sourceFile);
                         try {
                             ffmpeg.start();
                             openJavaSound(ffmpeg);
                             log("sound system initialized");
-                            long startTime = System.nanoTime() / 1000;
-                            long expectedInterframe = (long) (900_000 / ffmpeg.getFrameRate());
+                            videoThread.setFrameRate(ffmpeg.getFrameRate());
+                            boolean started = false;
+                            boolean gotAudio = ffmpeg.getAudioBitrate() == 0; //bitrate = 0 means no audio, so don't wait
+                            boolean gotVideo = ffmpeg.getVideoBitrate() == 0; //same for video
                             while (!canceled && !interrupted()) {
                                 try {
-                                    long frameStart = System.nanoTime() / 1000;
                                     Frame frame = ffmpeg.grabFrame();
                                     if (frame != null) {
                                         if (frame.samples != null) {
                                             audioThread.samples.put(converter.prepareSamplesForPlayback(frame.samples));
-                                            continue;
+                                            gotAudio = true;
                                         }
                                         if (frame.image != null) {
-                                            BufferedImage frameImage = ImageUtils.copy(frame.image.getBufferedImage());
-                                            synchronized (imageLock) {
-                                                currentImage = frameImage;
-                                            }
+                                            videoThread.frames.put(ImageUtils.copy(frame.image.getBufferedImage()));
+                                            gotVideo = true;
                                         }
                                     } else {
                                         normalExit = true;
                                         break;
                                     }
-                                    final long pts = ffmpeg.getTimestamp();
-                                    long targetEnd = (long) (startTime + pts);
-                                    if (Math.abs(targetEnd - frameStart - expectedInterframe) > 0.1 * expectedInterframe) {
-                                        targetEnd = frameStart + expectedInterframe;
-                                    }
-                                    long delay = targetEnd - System.nanoTime() / 1000;
-                                    if (delay > 0) {
-                                        TimeUnit.MICROSECONDS.sleep(delay);
+                                    if (gotAudio && gotVideo && !started) {
+                                        audioThread.start();
+                                        videoThread.start();
+                                        started = true;
                                     }
                                 } catch (FrameGrabber.Exception e) {
                                     e.printStackTrace();
@@ -252,10 +257,20 @@ public class Media extends ImageSource {
                                     return;
                                 }
                             }
+                            if (normalExit) {
+                                try {
+                                    while (!audioThread.samples.isEmpty() && !videoThread.frames.isEmpty())
+                                        Thread.sleep(5);
+                                } catch (InterruptedException e) {
+                                    log("got interrupted waiting for buffers to flush");
+                                    return;
+                                }
+                            }
                         } finally {
                             audioThread.canceled = true;
+                            videoThread.canceled = true;
                             audioThread.interrupt();
-                            log("in finally");
+                            videoThread.interrupt();
                             ffmpeg.stop();
                             ffmpeg.release();
                             closeJavaSound();
@@ -449,16 +464,16 @@ public class Media extends ImageSource {
             return buffer;
         }
     }
-    
-    private static class InterleavedShortConverter extends InterleavedConverter{
+
+    private static class InterleavedShortConverter extends InterleavedConverter {
 
         @Override
         public byte[] prepareSamplesForPlayback(Buffer[] samples) {
             ShortPointer ptr = new ShortPointer((ShortBuffer) samples[0]);
-            samples[0]=ptr.asByteBuffer();
+            samples[0] = ptr.asByteBuffer();
             return super.prepareSamplesForPlayback(samples);
         }
-        
+
     }
 
     private static class InterleavedConverter implements AudioConverter {
@@ -477,10 +492,41 @@ public class Media extends ImageSource {
         }
     }
 
+    private class VideoThread extends Thread {
+
+        volatile boolean canceled = false;
+        private final BlockingQueue<BufferedImage> frames = new ArrayBlockingQueue<>(256);
+        private double interframe = 1_000_000.0 / 29.97; //target microseconds per frame
+
+        @Override
+        public void run() {
+            long startTime = System.nanoTime() / 1000;
+            long index = 0;
+            while (!canceled && !interrupted()) {
+            try {
+                BufferedImage image = frames.take();
+                synchronized (imageLock) {
+                    currentImage = image;
+                }
+                index++;
+                double targetTime = startTime + index * interframe;
+                long now = System.nanoTime() / 1000;
+                if (now < targetTime)
+                    TimeUnit.MICROSECONDS.sleep((long)(targetTime - now));
+            } catch (InterruptedException ex) {
+                return;
+            }}
+        }
+
+        private void setFrameRate(double frameRate) {
+            this.interframe = 1_000_000 / frameRate;
+        }
+    }
+
     private class AudioThread extends Thread {
 
         volatile boolean canceled = false;
-        final BlockingQueue<byte[]> samples = new ArrayBlockingQueue<byte[]>(16);
+        final BlockingQueue<byte[]> samples = new ArrayBlockingQueue<byte[]>(256);
 
         @Override
         public void run() {
