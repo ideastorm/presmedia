@@ -16,8 +16,11 @@ import java.awt.Color;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -654,7 +657,11 @@ public class ControlView extends javax.swing.JFrame {
         saveChooser.setFileFilter(new FileNameExtensionFilter("Presmedia settings (*.presmedia)", "presmedia"));
         int result = saveChooser.showSaveDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
-            saveSettingsToFile(saveChooser.getSelectedFile());
+            String selectedFile = saveChooser.getSelectedFile().getPath();
+            if (!selectedFile.endsWith(".presmedia")) {
+                selectedFile = selectedFile + ".presmedia";
+            }
+            saveSettingsToFile(new File(selectedFile));
         }
     }//GEN-LAST:event_saveSettingsActionPerformed
 
@@ -663,7 +670,11 @@ public class ControlView extends javax.swing.JFrame {
         openChooser.setFileFilter(new FileNameExtensionFilter("Presmedia settings (*.presmedia)", "presmedia"));
         int result = openChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
-            loadSettingsFromFile(openChooser.getSelectedFile());
+            try {
+                loadSettingsFromFile(openChooser.getSelectedFile());
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(this, ex.getMessage(), "Failed to load file", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }//GEN-LAST:event_loadSettingsActionPerformed
 
@@ -859,7 +870,7 @@ public class ControlView extends javax.swing.JFrame {
         new Settings(mediaListModel, lyricsListModel, slideListModel, nameListModel).saveToFile(selectedFile);
     }
 
-    private void loadSettingsFromFile(File selectedFile) {
+    private void loadSettingsFromFile(File selectedFile) throws IOException {
         new Settings(mediaListModel, lyricsListModel, slideListModel, nameListModel).loadFromFile(selectedFile);
     }
 }
