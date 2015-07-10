@@ -8,6 +8,7 @@ import com.ideastormsoftware.cvutils.sources.ColorSource;
 import com.ideastormsoftware.cvutils.sources.CrossFadeProxySource;
 import com.ideastormsoftware.cvutils.util.ImageUtils;
 import com.ideastormsoftware.presmedia.filters.Lyrics;
+import com.ideastormsoftware.presmedia.filters.Name;
 import com.ideastormsoftware.presmedia.filters.Slideshow;
 import com.ideastormsoftware.presmedia.sources.Media;
 import com.ideastormsoftware.presmedia.util.DisplayFile;
@@ -45,6 +46,7 @@ public class ControlView extends javax.swing.JFrame {
     private final DefaultListModel<File> mediaListModel;
     private final DefaultListModel<Slideshow> slideListModel;
     private final DefaultListModel<Lyrics> lyricsListModel;
+    private final DefaultListModel<Name> nameListModel;
     private Lyrics selectedLyrics;
     private Lyrics activeLyrics;
     private Slideshow selectedSlides;
@@ -64,6 +66,8 @@ public class ControlView extends javax.swing.JFrame {
         songList.setModel(lyricsListModel);
         slideListModel = new DefaultListModel<>();
         slideList.setModel(slideListModel);
+        nameListModel = new DefaultListModel<>();
+        nameList.setModel(nameListModel);
     }
 
     @Override
@@ -200,12 +204,32 @@ public class ControlView extends javax.swing.JFrame {
         jScrollPane1.setViewportView(nameList);
 
         addName.setText("Add...");
+        addName.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                addNameActionPerformed(evt);
+            }
+        });
 
         removeName.setText("Remove");
+        removeName.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                removeNameActionPerformed(evt);
+            }
+        });
 
         editName.setText("Edit...");
+        editName.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                editNameActionPerformed(evt);
+            }
+        });
 
         displayName.setText("Show Selected Name");
+        displayName.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                displayNameActionPerformed(evt);
+            }
+        });
 
         jLabel6.setText("Lyrics");
 
@@ -611,7 +635,7 @@ public class ControlView extends javax.swing.JFrame {
     }//GEN-LAST:event_advanceLyricsActionPerformed
 
     private void showLyricsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_showLyricsActionPerformed
-        advanceLyrics.setEnabled(showLyrics.isSelected());            
+        advanceLyrics.setEnabled(showLyrics.isSelected());
         if (showLyrics.isSelected()) {
             activeLyrics = selectedLyrics;
             activeLyrics.reset();
@@ -676,6 +700,36 @@ public class ControlView extends javax.swing.JFrame {
             selectedSlides = slideListModel.getElementAt(slideList.getSelectedIndex());
         }
     }//GEN-LAST:event_slideListValueChanged
+
+    private void addNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addNameActionPerformed
+        Name name = new Name();
+        new NameEditor(name, () -> {
+            nameListModel.addElement(name);
+        }).setVisible(true);
+
+    }//GEN-LAST:event_addNameActionPerformed
+
+    private void editNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_editNameActionPerformed
+        if (nameList.getSelectedIndex() >= 0) {
+            new NameEditor(nameListModel.get(nameList.getSelectedIndex()), null).setVisible(true);
+        }
+    }//GEN-LAST:event_editNameActionPerformed
+
+    private void removeNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeNameActionPerformed
+        if (nameList.getSelectedIndex() >= 0) {
+            nameListModel.removeElementAt(nameList.getSelectedIndex());
+        }
+    }//GEN-LAST:event_removeNameActionPerformed
+
+    private void displayNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_displayNameActionPerformed
+        if (displayName.isSelected()) {
+            if (nameList.getSelectedIndex() >= 0) {
+                source.setOverlay(nameListModel.get(nameList.getSelectedIndex()));
+                return;
+            }
+        }
+        source.setOverlay(null);
+    }//GEN-LAST:event_displayNameActionPerformed
 
     /**
      * @param args the command line arguments
@@ -802,10 +856,10 @@ public class ControlView extends javax.swing.JFrame {
     }
 
     private void saveSettingsToFile(File selectedFile) {
-        new Settings(mediaListModel, lyricsListModel, slideListModel).saveToFile(selectedFile);
+        new Settings(mediaListModel, lyricsListModel, slideListModel, nameListModel).saveToFile(selectedFile);
     }
 
     private void loadSettingsFromFile(File selectedFile) {
-        new Settings(mediaListModel, lyricsListModel, slideListModel).loadFromFile(selectedFile);
+        new Settings(mediaListModel, lyricsListModel, slideListModel, nameListModel).loadFromFile(selectedFile);
     }
 }

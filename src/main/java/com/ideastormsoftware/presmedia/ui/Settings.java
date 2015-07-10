@@ -1,6 +1,7 @@
 package com.ideastormsoftware.presmedia.ui;
 
 import com.ideastormsoftware.presmedia.filters.Lyrics;
+import com.ideastormsoftware.presmedia.filters.Name;
 import com.ideastormsoftware.presmedia.filters.Slideshow;
 import java.io.File;
 import java.util.ArrayList;
@@ -15,11 +16,17 @@ class Settings {
     private final DefaultListModel<File> videoModel;
     private final DefaultListModel<Lyrics> lyricsModel;
     private final DefaultListModel<Slideshow> slidesModel;
+    private final DefaultListModel<Name> nameModel;
 
-    public Settings(DefaultListModel<File> videoListModel, DefaultListModel<Lyrics> lyricsListModel, DefaultListModel<Slideshow> slides) {
+    public Settings(
+            DefaultListModel<File> videoListModel,
+            DefaultListModel<Lyrics> lyricsListModel,
+            DefaultListModel<Slideshow> slides,
+            DefaultListModel<Name> names) {
         videoModel = videoListModel;
         lyricsModel = lyricsListModel;
-        this.slidesModel = slides;
+        slidesModel = slides;
+        nameModel = names;
     }
 
     private <T> List<T> enumerationToList(Enumeration<T> enumeration) {
@@ -42,11 +49,13 @@ class Settings {
         List<String> videos = filePaths(enumerationToList(videoModel.elements()));
         List<Lyrics> songs = enumerationToList(lyricsModel.elements());
         List<Slideshow> slides = enumerationToList(slidesModel.elements());
+        List<Name> names = enumerationToList(nameModel.elements());
         Map<String, List> settings = new HashMap<>(3);
         settings.put("videos", videos);
         settings.put("songs", songs);
         settings.put("slides", slides);
-        
+        settings.put("names", names);
+
 //        saveMapAsJson(settings, selectedFile);
     }
 
