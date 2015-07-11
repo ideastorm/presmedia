@@ -49,7 +49,7 @@ public class Slideshow extends AbstractFilter {
     @Override
     protected BufferedImage filter(BufferedImage original, Dimension targetScreenSize) {
         long now = System.currentTimeMillis();
-        BufferedImage compositeImage;
+        BufferedImage compositeImage = ImageUtils.emptyImage(targetScreenSize);
         //if it's time to transition, this will become true
         //  lastTransition is set to now to break out of the loop once we've
         //  got a new file to transition to.
@@ -69,6 +69,7 @@ public class Slideshow extends AbstractFilter {
         }
         float fadeDelay = perSlideDelay * 0.2f;
         float alpha = (now - lastTransition) / fadeDelay;
+
         if (now - lastTransition > fadeDelay) {
             if (fadeImage != null) {
                 lastImage = fadeImage;
@@ -76,11 +77,10 @@ public class Slideshow extends AbstractFilter {
             }
             compositeImage = ImageUtils.copyAspectScaled(lastImage, targetScreenSize);
         } else {
-            compositeImage = ImageUtils.copyAspectScaled(lastImage, targetScreenSize);
-            BufferedImage overlayImage = ImageUtils.copyAspectScaled(fadeImage, targetScreenSize);
             Graphics2D g = compositeImage.createGraphics();
+            ImageUtils.drawAspectScaled(g, lastImage, targetScreenSize);
             g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-            g.drawImage(overlayImage, 0, 0, null);
+            ImageUtils.drawAspectScaled(g, fadeImage, targetScreenSize);
         }
         return compositeImage;
     }
