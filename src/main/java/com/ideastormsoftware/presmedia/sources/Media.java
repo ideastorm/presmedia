@@ -1,3 +1,18 @@
+/*
+ * Copyright 2015 Phillip Hayward <phil@pjhayward.net>.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.ideastormsoftware.presmedia.sources;
 
 import com.ideastormsoftware.cvutils.sources.ImageSource;
@@ -5,14 +20,14 @@ import com.ideastormsoftware.cvutils.sources.OnDemandSource;
 import com.ideastormsoftware.cvutils.util.ImageUtils;
 import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
+import static java.lang.Thread.currentThread;
+import static java.lang.Thread.interrupted;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.DoubleBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -23,7 +38,18 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.ShortPointer;
-import static org.bytedeco.javacpp.avutil.*;
+import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_DBL;
+import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_DBLP;
+import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_FLT;
+import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_FLTP;
+import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_NONE;
+import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_S16;
+import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_S16P;
+import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_S32;
+import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_S32P;
+import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_U8;
+import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_U8P;
+import static org.bytedeco.javacpp.avutil.av_get_sample_fmt_name;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber;
@@ -33,6 +59,7 @@ public class Media extends ImageSource implements OnDemandSource {
     private SourceDataLine mLine;
     private AudioConverter converter;
     private AudioFormat audioFormat;
+    private final Runnable callback;
 
     private final String sourceFile;
     private final Object imageLock = new Object();
@@ -42,7 +69,6 @@ public class Media extends ImageSource implements OnDemandSource {
         System.out.println(String.format("%d %s - %s", System.currentTimeMillis(),
                 Thread.currentThread().getName(), String.format(format, params)));
     }
-    private final Runnable callback;
 
     public Media(String sourceFile, Runnable callback) throws FrameGrabber.Exception {
         this.sourceFile = sourceFile;
@@ -56,7 +82,7 @@ public class Media extends ImageSource implements OnDemandSource {
     @Override
     public void start() {
         try {
-            openSourceFile();
+            openSource();
         } catch (FrameGrabber.Exception ex) {
             ex.printStackTrace();
         }
@@ -65,7 +91,7 @@ public class Media extends ImageSource implements OnDemandSource {
     @Override
     public void stop() {
         try {
-            closeSourceFile();
+            closeSource();
         } catch (FrameGrabber.Exception ex) {
             ex.printStackTrace();
         }
@@ -167,14 +193,14 @@ public class Media extends ImageSource implements OnDemandSource {
 
     private GrabberThread grabber;
 
-    private void openSourceFile() throws FrameGrabber.Exception {
+    private void openSource() throws FrameGrabber.Exception {
         log("initializing new processing thread");
-        grabber = new GrabberThread(sourceFile);
+        grabber = new GrabberThread();
         grabber.start();
         log("processing thread %s started", grabber.getName());
     }
 
-    private void closeSourceFile() throws FrameGrabber.Exception {
+    private void closeSource() throws FrameGrabber.Exception {
         try {
             log("shutting down processing thread");
             if (grabber != null) {
@@ -188,8 +214,6 @@ public class Media extends ImageSource implements OnDemandSource {
         }
     }
 
-    private static final Object threadLock = new Object();
-
     private String bytePointerToString(BytePointer ptr) {
         byte[] bytes = new byte[ptr.limit()];
         ptr.get(bytes);
@@ -199,12 +223,10 @@ public class Media extends ImageSource implements OnDemandSource {
     private class GrabberThread extends Thread {
 
         private volatile boolean canceled = false;
-        private final String sourceFile;
         private final BlockingQueue<BufferedImage> frameQueue;
 
-        private GrabberThread(String sourceFile) {
+        private GrabberThread() {
             this.frameQueue = new ArrayBlockingQueue<BufferedImage>(256);
-            this.sourceFile = sourceFile;
         }
 
         @Override
@@ -214,76 +236,74 @@ public class Media extends ImageSource implements OnDemandSource {
             AudioThread audioThread = new AudioThread();
             VideoThread videoThread = new VideoThread();
             try {
-                synchronized (threadLock) {
-                    log("media processing lock acquired");
+                try {
+                    FFmpegFrameGrabber ffmpeg = FFmpegFrameGrabber.createDefault(getSourceFile());
                     try {
-                        FFmpegFrameGrabber ffmpeg = FFmpegFrameGrabber.createDefault(sourceFile);
-                        try {
-                            ffmpeg.start();
-                            openJavaSound(ffmpeg);
-                            log("sound system initialized");
-                            videoThread.setFrameRate(ffmpeg.getFrameRate());
-                            boolean started = false;
-                            boolean gotAudio = ffmpeg.getAudioBitrate() == 0; //bitrate = 0 means no audio, so don't wait
-                            boolean gotVideo = ffmpeg.getVideoBitrate() == 0; //same for video
-                            while (!canceled && !interrupted()) {
-                                try {
-                                    Frame frame = ffmpeg.grabFrame();
-                                    if (frame != null) {
-                                        if (frame.samples != null) {
-                                            audioThread.samples.put(converter.prepareSamplesForPlayback(frame.samples));
-                                            gotAudio = true;
-                                        }
-                                        if (frame.image != null) {
-                                            videoThread.frames.put(ImageUtils.copy(frame.image.getBufferedImage()));
-                                            gotVideo = true;
-                                        }
-                                    } else {
-                                        normalExit = true;
-                                        break;
+                        ffmpeg.start();
+                        openJavaSound(ffmpeg);
+                        log("sound system initialized");
+                        videoThread.setFrameRate(ffmpeg.getFrameRate());
+                        boolean started = false;
+                        boolean gotAudio = ffmpeg.getAudioBitrate() == 0; //bitrate = 0 means no audio, so don't wait
+                        boolean gotVideo = ffmpeg.getVideoBitrate() == 0; //same for video
+                        while (!canceled && !interrupted()) {
+                            try {
+                                Frame frame = ffmpeg.grabFrame();
+                                if (frame != null) {
+                                    if (frame.samples != null) {
+                                        audioThread.samples.put(converter.prepareSamplesForPlayback(frame.samples));
+                                        gotAudio = true;
                                     }
-                                    if (gotAudio && gotVideo && !started) {
-                                        audioThread.start();
-                                        videoThread.start();
-                                        started = true;
+                                    if (frame.image != null) {
+                                        videoThread.frames.put(ImageUtils.copy(frame.image.getBufferedImage()));
+                                        gotVideo = true;
                                     }
-                                } catch (FrameGrabber.Exception e) {
-                                    e.printStackTrace();
-                                    synchronized (imageLock) {
-                                        currentImage = ImageUtils.emptyImage();
-                                    }
-                                } catch (InterruptedException ex) {
-                                    log("got interrupted");
-                                    return;
+                                } else {
+                                    normalExit = true;
+                                    break;
                                 }
-                            }
-                            if (normalExit) {
-                                try {
-                                    while (!audioThread.samples.isEmpty() && !videoThread.frames.isEmpty())
-                                        Thread.sleep(5);
-                                } catch (InterruptedException e) {
-                                    log("got interrupted waiting for buffers to flush");
-                                    return;
+                                if (gotAudio && gotVideo && !started) {
+                                    audioThread.start();
+                                    videoThread.start();
+                                    started = true;
                                 }
+                            } catch (FrameGrabber.Exception e) {
+                                e.printStackTrace();
+                                synchronized (imageLock) {
+                                    currentImage = ImageUtils.emptyImage();
+                                }
+                            } catch (InterruptedException ex) {
+                                log("got interrupted");
+                                return;
                             }
-                        } finally {
-                            audioThread.canceled = true;
-                            videoThread.canceled = true;
-                            audioThread.interrupt();
-                            videoThread.interrupt();
-                            ffmpeg.stop();
-                            ffmpeg.release();
-                            closeJavaSound();
-                            log("processing thread terminated");
                         }
-                        log("post finally");
-                    } catch (Throwable ex) {
-                        log("in catch");
-                        ex.printStackTrace();
+                        if (normalExit) {
+                            try {
+                                while (!audioThread.samples.isEmpty() && !videoThread.frames.isEmpty()) {
+                                    Thread.sleep(5);
+                                }
+                            } catch (InterruptedException e) {
+                                log("got interrupted waiting for buffers to flush");
+                                return;
+                            }
+                        }
+                    } finally {
+                        audioThread.canceled = true;
+                        videoThread.canceled = true;
+                        audioThread.interrupt();
+                        videoThread.interrupt();
+                        ffmpeg.stop();
+                        ffmpeg.release();
+                        closeJavaSound();
+                        log("processing thread terminated");
                     }
-
-                    log("post catch");
+                    log("post finally");
+                } catch (Throwable ex) {
+                    log("in catch");
+                    ex.printStackTrace();
                 }
+
+                log("post catch");
             } finally {
                 log("exited thread lock - ready to go with the next thread");
                 if (normalExit) {
@@ -503,19 +523,21 @@ public class Media extends ImageSource implements OnDemandSource {
             long startTime = System.nanoTime() / 1000;
             long index = 0;
             while (!canceled && !interrupted()) {
-            try {
-                BufferedImage image = frames.take();
-                synchronized (imageLock) {
-                    currentImage = image;
+                try {
+                    BufferedImage image = frames.take();
+                    synchronized (imageLock) {
+                        currentImage = image;
+                    }
+                    index++;
+                    double targetTime = startTime + index * interframe;
+                    long now = System.nanoTime() / 1000;
+                    if (now < targetTime) {
+                        TimeUnit.MICROSECONDS.sleep((long) (targetTime - now));
+                    }
+                } catch (InterruptedException ex) {
+                    return;
                 }
-                index++;
-                double targetTime = startTime + index * interframe;
-                long now = System.nanoTime() / 1000;
-                if (now < targetTime)
-                    TimeUnit.MICROSECONDS.sleep((long)(targetTime - now));
-            } catch (InterruptedException ex) {
-                return;
-            }}
+            }
         }
 
         private void setFrameRate(double frameRate) {
@@ -541,6 +563,5 @@ public class Media extends ImageSource implements OnDemandSource {
                 }
             }
         }
-
     }
 }
