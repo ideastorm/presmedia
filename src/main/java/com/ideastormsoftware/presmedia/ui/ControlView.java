@@ -19,8 +19,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -535,7 +533,7 @@ public class ControlView extends javax.swing.JFrame {
     private void configureCamerasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_configureCamerasActionPerformed
         if (displayCamera.isSelected()) {
             displayCamera.setSelected(false);
-            if (!displayMedia.isSelected() && !showSlides.isSelected()) {
+            if (!displayMedia.isSelected()) {
                 updatePreview();
             }
         }
@@ -560,7 +558,7 @@ public class ControlView extends javax.swing.JFrame {
                     selectedCamera = camera;
                     selectedLiveInput = preview;
                     preview.setBorder(new LineBorder(Color.red, 2));
-                    if (fireUpdate && !displayMedia.isSelected() && !showSlides.isSelected()) {
+                    if (fireUpdate && !displayMedia.isSelected()) {
                         updatePreview();
                     }
                 }
@@ -572,7 +570,7 @@ public class ControlView extends javax.swing.JFrame {
     }//GEN-LAST:event_configureCamerasActionPerformed
 
     private void displayCameraActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_displayCameraActionPerformed
-        if (!displayMedia.isSelected() && !showSlides.isSelected()) {
+        if (!displayMedia.isSelected()) {
             updatePreview();
         }
     }//GEN-LAST:event_displayCameraActionPerformed
@@ -600,9 +598,7 @@ public class ControlView extends javax.swing.JFrame {
     }//GEN-LAST:event_removeMediaActionPerformed
 
     private void displayMediaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_displayMediaActionPerformed
-        if (!showSlides.isSelected()) {
-            updatePreview();
-        }
+        updatePreview();
     }//GEN-LAST:event_displayMediaActionPerformed
 
     private void addSongActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addSongActionPerformed
@@ -839,9 +835,7 @@ public class ControlView extends javax.swing.JFrame {
                                     mediaIndex = 0;
                                 } else {
                                     displayMedia.setSelected(false);
-                                    if (!showSlides.isSelected()) {
-                                        updatePreview();
-                                    }
+                                    updatePreview();
                                     return;
                                 }
                             }
