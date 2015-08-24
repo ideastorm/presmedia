@@ -36,11 +36,6 @@
     </build>
     <dependencies>
         <dependency>
-            <groupId>com.github.sarxos</groupId>
-            <artifactId>webcam-capture</artifactId>
-            <version>0.3.10</version>
-        </dependency>
-        <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>javacpp-presets</artifactId>
             <version>0.10</version>
@@ -85,6 +80,11 @@
             <artifactId>imgscalr-lib</artifactId>
             <version>4.2</version>
             <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>CvUtils</artifactId>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
     <properties>

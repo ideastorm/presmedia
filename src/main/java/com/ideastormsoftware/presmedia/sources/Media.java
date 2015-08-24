@@ -15,7 +15,9 @@
  */
 package com.ideastormsoftware.presmedia.sources;
 
-import com.ideastormsoftware.presmedia.util.ImageUtils;
+import com.ideastormsoftware.cvutils.sources.ImageSource;
+import com.ideastormsoftware.cvutils.sources.OnDemandSource;
+import com.ideastormsoftware.cvutils.util.ImageUtils;
 import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
 import static java.lang.Thread.currentThread;

@@ -1,6 +1,7 @@
 package com.ideastormsoftware.presmedia.filters;
 
-import com.ideastormsoftware.presmedia.util.ImageUtils;
+import com.ideastormsoftware.cvutils.filters.AbstractFilter;
+import com.ideastormsoftware.cvutils.util.ImageUtils;
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Dimension;
