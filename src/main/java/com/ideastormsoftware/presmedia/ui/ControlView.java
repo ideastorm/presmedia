@@ -1,5 +1,6 @@
 package com.ideastormsoftware.presmedia.ui;
 
+import com.ideastormsoftware.cvutils.filters.Deinterlace;
 import com.ideastormsoftware.cvutils.sources.Camera;
 import com.ideastormsoftware.cvutils.sources.ColorSource;
 import com.ideastormsoftware.cvutils.sources.CrossFadeProxySource;
@@ -129,6 +130,7 @@ public class ControlView extends javax.swing.JFrame {
         saveSettings = new javax.swing.JButton();
         loadSettings = new javax.swing.JButton();
         loopMedia = new javax.swing.JCheckBox();
+        deinterlaceCamera = new javax.swing.JCheckBox();
 
         setTitle("Presmedia Control");
 
@@ -372,7 +374,7 @@ public class ControlView extends javax.swing.JFrame {
                 .addContainerGap()
                 .addComponent(jLabel5)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 122, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(addName)
@@ -442,6 +444,8 @@ public class ControlView extends javax.swing.JFrame {
 
         loopMedia.setText("Loop Selected Media Files");
 
+        deinterlaceCamera.setText("Deinterlace Video");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -453,9 +457,10 @@ public class ControlView extends javax.swing.JFrame {
                         .addComponent(configureCameras, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addGroup(layout.createSequentialGroup()
                             .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 144, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addGap(0, 18, Short.MAX_VALUE))
+                            .addGap(0, 0, Short.MAX_VALUE))
                         .addComponent(displayCamera, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 162, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 162, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(deinterlaceCamera))
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addGroup(layout.createSequentialGroup()
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
@@ -478,7 +483,7 @@ public class ControlView extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addGap(0, 84, Short.MAX_VALUE)
+                        .addGap(0, 0, Short.MAX_VALUE)
                         .addComponent(saveSettings)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(loadSettings))
@@ -501,11 +506,12 @@ public class ControlView extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jScrollPane3)
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(loopMedia)))
+                            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jScrollPane3))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(loopMedia)
+                            .addComponent(deinterlaceCamera))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(configureCameras)
@@ -779,6 +785,7 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JButton addSong;
     private javax.swing.JButton advanceLyrics;
     private javax.swing.JButton configureCameras;
+    private javax.swing.JCheckBox deinterlaceCamera;
     private javax.swing.JToggleButton displayCamera;
     private javax.swing.JToggleButton displayMedia;
     private javax.swing.JToggleButton displayName;
@@ -848,7 +855,11 @@ public class ControlView extends javax.swing.JFrame {
                     source.setDelegate(new Media(selectedMedia.get(0).getAbsolutePath(), callback));
                 }
             } else if (displayCamera.isSelected() && selectedCamera != null) {
-                source.setDelegate(selectedCamera);
+                if (deinterlaceCamera.isSelected()) {
+                    source.setDelegate(new Deinterlace().setSource(selectedCamera));
+                } else {
+                    source.setDelegate(selectedCamera);
+                }
             } else {
                 source.setDelegate(new ColorSource());
             }
