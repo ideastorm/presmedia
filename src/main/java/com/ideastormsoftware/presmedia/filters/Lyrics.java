@@ -58,6 +58,7 @@ public class Lyrics extends AbstractFilter {
     @Override
     protected BufferedImage filter(BufferedImage original, Dimension targetScreenSize) {
         //Start by finding ow wide we can be to fit in a 4:3 aspect ratio screen
+        targetScreenSize = new Dimension(original.getWidth(), original.getHeight());
         int w = targetScreenSize.width;
         if (targetScreenSize.width * 3 > targetScreenSize.height * 4) {
             w = targetScreenSize.height * 4 / 3;
