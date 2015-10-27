@@ -82,6 +82,11 @@
             <type>jar</type>
         </dependency>
         <dependency>
+            <groupId>de.humatic</groupId>
+            <artifactId>dsj</artifactId>
+            <version>0.8.8</version>
+        </dependency>
+        <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>CvUtils</artifactId>
             <version>${project.version}</version>
