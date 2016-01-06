@@ -1,7 +1,6 @@
 package com.ideastormsoftware.presmedia.filters;
 
-import com.ideastormsoftware.cvutils.filters.AbstractFilter;
-import com.ideastormsoftware.cvutils.util.ImageUtils;
+import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.AlphaComposite;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
@@ -14,7 +13,7 @@ import java.util.Enumeration;
 import java.util.List;
 import javax.imageio.ImageIO;
 
-public class Slideshow extends AbstractFilter {
+public class Slideshow extends ImageFilter {
 
     private List<File> files = Collections.EMPTY_LIST;
     private String title = "";

@@ -1,7 +1,6 @@
 package com.ideastormsoftware.presmedia.filters;
 
-import com.ideastormsoftware.cvutils.filters.AbstractFilter;
-import com.ideastormsoftware.cvutils.util.ImageUtils;
+import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -10,7 +9,7 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 
-public class Name extends AbstractFilter {
+public class Name extends ImageFilter {
 
     private String name = "";
     private String subtext = "";

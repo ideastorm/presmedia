@@ -15,9 +15,7 @@
  */
 package com.ideastormsoftware.presmedia.sources;
 
-import com.ideastormsoftware.cvutils.sources.ImageSource;
-import com.ideastormsoftware.cvutils.sources.OnDemandSource;
-import com.ideastormsoftware.cvutils.util.ImageUtils;
+import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
 import static java.lang.Thread.currentThread;
@@ -54,7 +52,7 @@ import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber;
 
-public class Media extends ImageSource implements OnDemandSource {
+public class Media extends ImageSource {
 
     private SourceDataLine mLine;
     private AudioConverter converter;
@@ -80,7 +78,7 @@ public class Media extends ImageSource implements OnDemandSource {
     }
 
     @Override
-    public void start() {
+    public void activate() {
         try {
             openSource();
         } catch (FrameGrabber.Exception ex) {
@@ -89,7 +87,7 @@ public class Media extends ImageSource implements OnDemandSource {
     }
 
     @Override
-    public void stop() {
+    public void deactivate() {
         try {
             closeSource();
         } catch (FrameGrabber.Exception ex) {
@@ -98,7 +96,7 @@ public class Media extends ImageSource implements OnDemandSource {
     }
 
     @Override
-    public BufferedImage getCurrentImage() {
+    public BufferedImage get() {
         synchronized (imageLock) {
             return currentImage;
         }

@@ -1,7 +1,6 @@
 package com.ideastormsoftware.presmedia.filters;
 
-import com.ideastormsoftware.cvutils.filters.AbstractFilter;
-import com.ideastormsoftware.cvutils.util.ImageUtils;
+import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -11,7 +10,7 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.util.List;
 
-public class Lyrics extends AbstractFilter {
+public class Lyrics extends ImageFilter {
 
     private String title;
     private List<String> lines;
@@ -58,7 +57,6 @@ public class Lyrics extends AbstractFilter {
     @Override
     protected BufferedImage filter(BufferedImage original, Dimension targetScreenSize) {
         //Start by finding ow wide we can be to fit in a 4:3 aspect ratio screen
-        targetScreenSize = new Dimension(original.getWidth(), original.getHeight());
         int w = targetScreenSize.width;
         if (targetScreenSize.width * 3 > targetScreenSize.height * 4) {
             w = targetScreenSize.height * 4 / 3;
