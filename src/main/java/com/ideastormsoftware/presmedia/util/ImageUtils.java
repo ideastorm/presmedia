@@ -15,7 +15,6 @@
  */
 package com.ideastormsoftware.presmedia.util;
 
-import com.ideastormsoftware.presmedia.sources.ImageSource;
 import com.ideastormsoftware.presmedia.sources.ScaledSource;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -23,6 +22,7 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.util.function.Supplier;
 import org.imgscalr.Scalr;
 
 public final class ImageUtils {
@@ -102,15 +102,12 @@ public final class ImageUtils {
         g.drawImage(img, offset.x, offset.y, (int) scaledSize.width, (int) scaledSize.height, null);
     }
     
-    public static ScaledSource scaleSource(final ImageSource source)
-    {
-        return new ScaledSource() {
+    public static ScaledSource scaleSource(Supplier<BufferedImage> source) {
+        return new ScaledSource().setSource(source);
+    }
 
-            @Override
-            public BufferedImage getScaled(Dimension targetSize) {
-                return ImageUtils.copyAspectScaled(source.get(), targetSize);
-            }
-        };
+    public static boolean needsScaling(BufferedImage img, Dimension targetSize) {
+        return img.getWidth() != targetSize.getWidth() || img.getHeight() != targetSize.getHeight();
     }
 
     private ImageUtils() {

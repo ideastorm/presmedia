@@ -55,18 +55,18 @@ public class Lyrics extends ImageFilter {
     }
 
     @Override
-    protected BufferedImage filter(BufferedImage original, Dimension targetScreenSize) {
+    protected BufferedImage filter(BufferedImage original) {
         //Start by finding ow wide we can be to fit in a 4:3 aspect ratio screen
-        int w = targetScreenSize.width;
-        if (targetScreenSize.width * 3 > targetScreenSize.height * 4) {
-            w = targetScreenSize.height * 4 / 3;
+        int w = targetSize.width;
+        if (targetSize.width * 3 > targetSize.height * 4) {
+            w = targetSize.height * 4 / 3;
         }
         int shadowWidth = w * 9 / 10;
         w = w * 8 / 10;
-        int offset = (targetScreenSize.width - w) / 2;
+        int offset = (targetSize.width - w) / 2;
         float estimatedCharacterHeight = w / 40 * 2.5f;
         int totalHeight = (int) (estimatedCharacterHeight * 3.2f);
-        int vOffset = (int) (targetScreenSize.height - totalHeight);
+        int vOffset = (int) (targetSize.height - totalHeight);
 
         Font font = Font.decode("Verdana");
         font = font.deriveFont(estimatedCharacterHeight * 72 / 96);

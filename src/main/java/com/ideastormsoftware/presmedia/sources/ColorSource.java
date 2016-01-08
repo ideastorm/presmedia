@@ -20,10 +20,12 @@ import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.util.function.Supplier;
 
-public class ColorSource extends ImageSource {
+public class ColorSource implements Supplier<BufferedImage> {
 
     private Color color;
+    private final BufferedImage currentImage;
 
     public ColorSource() {
         this(Color.black);
@@ -46,4 +48,8 @@ public class ColorSource extends ImageSource {
         this.color = color;
     }
 
+    @Override
+    public BufferedImage get() {
+        return currentImage;
+    }
 }

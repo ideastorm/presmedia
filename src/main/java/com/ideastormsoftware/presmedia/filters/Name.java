@@ -15,9 +15,9 @@ public class Name extends ImageFilter {
     private String subtext = "";
 
     @Override
-    protected BufferedImage filter(BufferedImage original, Dimension targetScreenSize) {
+    protected BufferedImage filter(BufferedImage original) {
         //Start by finding ow wide we can be to fit in a 4:3 aspect ratio screen
-        targetScreenSize = new Dimension(original.getWidth(), original.getHeight());
+        Dimension targetScreenSize = new Dimension(original.getWidth(), original.getHeight());
         int w = targetScreenSize.width;
         if (targetScreenSize.width * 3 > targetScreenSize.height * 4) {
             w = targetScreenSize.height * 4 / 3;

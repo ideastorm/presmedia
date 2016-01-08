@@ -1,5 +1,6 @@
 package com.ideastormsoftware.presmedia.filters;
 
+import com.ideastormsoftware.presmedia.sources.ScaledSource;
 import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.AlphaComposite;
 import java.awt.Dimension;
@@ -11,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.function.Supplier;
 import javax.imageio.ImageIO;
 
 public class Slideshow extends ImageFilter {
@@ -27,6 +29,11 @@ public class Slideshow extends ImageFilter {
 
     private void log(String format, Object... params) {
         System.out.printf(format + "\n", params);
+    }
+
+    @Override
+    public <T extends ScaledSource> T setSource(Supplier<BufferedImage> source) {
+        return super.setSource(ImageUtils::emptyImage);
     }
 
     private File pickRandomFile() {
@@ -46,9 +53,8 @@ public class Slideshow extends ImageFilter {
     }
 
     @Override
-    protected BufferedImage filter(BufferedImage original, Dimension targetScreenSize) {
+    protected BufferedImage filter(BufferedImage img) {
         long now = System.currentTimeMillis();
-        BufferedImage compositeImage = ImageUtils.emptyImage(targetScreenSize);
         //if it's time to transition, this will become true
         //  lastTransition is set to now to break out of the loop once we've
         //  got a new file to transition to.
@@ -68,22 +74,24 @@ public class Slideshow extends ImageFilter {
         }
         float fadeDelay = perSlideDelay * 0.2f;
         float alpha = (now - lastTransition) / fadeDelay;
+        
+        BufferedImage compositeImage = img;
 
         if (now - lastTransition > fadeDelay) {
             if (fadeImage != null) {
                 lastImage = fadeImage;
                 fadeImage = null;
             }
-            compositeImage = ImageUtils.copyAspectScaled(lastImage, targetScreenSize);
+            compositeImage = ImageUtils.copyAspectScaled(lastImage, targetSize);
         } else {
             Graphics2D g = compositeImage.createGraphics();
-            ImageUtils.drawAspectScaled(g, lastImage, targetScreenSize);
+            ImageUtils.drawAspectScaled(g, lastImage, targetSize);
             g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-            ImageUtils.drawAspectScaled(g, fadeImage, targetScreenSize);
+            ImageUtils.drawAspectScaled(g, fadeImage, targetSize);
         }
         return compositeImage;
     }
-
+    
     public String getTitle() {
         return title;
     }

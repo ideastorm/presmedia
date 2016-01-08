@@ -13,66 +13,71 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.ideastormsoftware.presmedia.sources;
 
 import com.ideastormsoftware.presmedia.util.ImageUtils;
 import com.ideastormsoftware.presmedia.filters.ImageFilter;
 import java.awt.AlphaComposite;
-import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.util.function.Supplier;
 
-public class CrossFadeProxySource extends ImageSource implements ScaledSource {
+public class CrossFadeProxySource extends ScaledSource {
 
-    private ImageSource delegate;
-    private ImageSource fadeIntoDelegate;
+    private Supplier<BufferedImage> fadeIntoSource;
     private static final double fadeDuration = 0.5;
     private long fadeStartTime;
 
-    public CrossFadeProxySource(ImageSource delegate) {
-        this.delegate = delegate;
-    }
-
-    public void setDelegate(ImageSource delegate) {
-        delegate.activate();
-
-        if (this.delegate instanceof ImageFilter) {
-            ((ImageFilter) this.delegate).setSource(delegate);
+    @Override
+    public <T extends ScaledSource> T setSource(Supplier<BufferedImage> source) {
+        if (source instanceof Startable) {
+            ((Startable) source).start();
+        }
+        if (this.source instanceof ImageFilter) {
+            ((ImageFilter) this.source).setSource(source);
         } else {
-            if (fadeIntoDelegate != null) {
-                this.delegate = fadeIntoDelegate;
+            if (fadeIntoSource != null) {
+                if (this.source instanceof CleanCloseable) {
+                    ((CleanCloseable) this.source).close();
+                }
+                this.source = fadeIntoSource;
             }
-            setFadeDelegateInternal(delegate);
+            setFadeSourceInternal(source);
         }
+        return (T) this;
     }
 
-    public void setDelegateNoFade(ImageSource delegate) {
-        this.delegate.deactivate();
-        delegate.activate();
-        if (this.delegate instanceof ImageFilter) {
-            ((ImageFilter) this.delegate).setSource(delegate);
+    public CrossFadeProxySource setSourceNoFade(Supplier<BufferedImage> source) {
+        if (source instanceof Startable) {
+            ((Startable) source).start();
+        }
+        if (this.source instanceof ImageFilter) {
+            ((ImageFilter) this.source).setSource(source);
         } else {
-            this.delegate = delegate;
-            fadeIntoDelegate = null;
+            if (this.source instanceof CleanCloseable) {
+                ((CleanCloseable) this.source).close();
+            }
+            this.source = source;
+            fadeIntoSource = null;
         }
+        return this;
     }
 
-    private void setFadeDelegateInternal(ImageSource source) {
-        fadeIntoDelegate = source;
+    private void setFadeSourceInternal(Supplier<BufferedImage> source) {
+        fadeIntoSource = source;
         fadeStartTime = System.nanoTime();
     }
 
     public void setOverlay(ImageFilter overlay) {
-        ImageSource baseSource = delegate;
+        Supplier<BufferedImage> baseSource = source;
         if (baseSource instanceof ImageFilter) {
             baseSource = ((ImageFilter) baseSource).getSource();
         }
         if (overlay == null) {
-            setFadeDelegateInternal(baseSource);
+            setFadeSourceInternal(baseSource);
         } else {
             overlay.setSource(baseSource);
-            setFadeDelegateInternal(overlay);
+            setFadeSourceInternal(overlay);
         }
     }
 
@@ -87,27 +92,25 @@ public class CrossFadeProxySource extends ImageSource implements ScaledSource {
     }
 
     @Override
-    public BufferedImage getScaled(Dimension finalSize) {
-        long start = System.currentTimeMillis();
-        BufferedImage baseImage = ImageUtils.emptyImage(finalSize);
+    protected void setScaledImage(BufferedImage img) {
+        BufferedImage baseImage = ImageUtils.emptyImage(targetSize);
         Graphics2D g = baseImage.createGraphics();
-        long prepBaseTime = System.currentTimeMillis();
-        ImageUtils.drawAspectScaled(g, ImageUtils.copyAspectScaled(delegate.get(), finalSize), finalSize);
-        long scaleDelegateTime = System.currentTimeMillis();
-        if (fadeIntoDelegate != null) {
-            BufferedImage overlayImage = ImageUtils.copyAspectScaled(fadeIntoDelegate.get(),finalSize);
+        BufferedImage original = img;
+        ImageUtils.drawAspectScaled(g, original, targetSize);
+        if (fadeIntoSource != null) {
+            BufferedImage overlayImage = ImageUtils.copyAspectScaled(fadeIntoSource.get(), targetSize);
             float alpha = findAlpha();
             if (alpha >= 1) {
                 alpha = 1;
-                delegate.deactivate();
-                delegate = fadeIntoDelegate;
-                fadeIntoDelegate = null;
+                if (this.source instanceof CleanCloseable) {
+                    ((CleanCloseable) this.source).close();
+                }
+                source = fadeIntoSource;
+                fadeIntoSource = null;
             }
             g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-            ImageUtils.drawAspectScaled(g, overlayImage, finalSize);
+            ImageUtils.drawAspectScaled(g, overlayImage, targetSize);
         }
-        long fadeDelegateTime = System.currentTimeMillis();
-        System.out.printf("base %d, scale %d, fade %d\n", prepBaseTime - start, scaleDelegateTime - prepBaseTime, fadeDelegateTime - scaleDelegateTime);
-        return baseImage;
+        super.setScaledImage(baseImage);
     }
 }

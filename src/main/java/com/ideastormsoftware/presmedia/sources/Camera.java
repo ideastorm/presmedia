@@ -15,41 +15,49 @@
  */
 package com.ideastormsoftware.presmedia.sources;
 
+import com.ideastormsoftware.presmedia.util.ImageUtils;
 import de.humatic.dsj.DSCapture;
 import de.humatic.dsj.DSFilterInfo;
 import de.humatic.dsj.DSFiltergraph;
+import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.io.Closeable;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
-public class Camera extends ImageSource implements PropertyChangeListener {
+public class Camera implements Supplier<BufferedImage>, PropertyChangeListener {
+
     private static final Set<Camera> activeCameras = new HashSet<>();
+    private static final List<DSFilterInfo> cameraInfo = new ArrayList<>();
+    private final DSFilterInfo deviceInfo;
 
     public static int availableCameras() {
-        return DSCapture.queryDevices()[0].length;
-    }
-    
-    private DSCapture capture;
-
-    private Camera() {
-        this(0);
-    }
-    
-    public Camera(Integer cameraIndex) {
+        cameraInfo.clear();
         DSFilterInfo[][] filterInfo = DSCapture.queryDevices();
-        capture = new DSCapture(DSFiltergraph.JAVA_POLL | DSFiltergraph.FRAME_CALLBACK, filterInfo[0][cameraIndex], false, DSFilterInfo.doNotRender(), this);
+        for (DSFilterInfo capInfo : filterInfo[0]) {
+            if (!"none".equals(capInfo.getCLSID())) {
+                cameraInfo.add(capInfo);
+            }
+        }
+        return cameraInfo.size();
+    }
+
+    private final DSCapture capture;
+    private BufferedImage currentImage = ImageUtils.emptyImage();
+
+    public Camera(Integer cameraIndex) {
+        deviceInfo = cameraInfo.get(cameraIndex);
+        System.out.printf("Attempting to start %s\n", deviceInfo.toString());
+        capture = new DSCapture(DSFiltergraph.JAVA_POLL | DSFiltergraph.FRAME_CALLBACK, deviceInfo, false, DSFilterInfo.doNotRender(), this);
         activeCameras.add(this);
     }
 
-    @Override
-    public void activate() {
-    }
-
-    @Override
-    public void deactivate() {
+    public void close() {
         capture.dispose();
         activeCameras.remove(this);
     }
@@ -61,22 +69,23 @@ public class Camera extends ImageSource implements PropertyChangeListener {
 
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
-        if (Integer.parseInt(evt.getNewValue().toString()) == DSFiltergraph.FRAME_NOTIFY)
-        {
-            long start = System.nanoTime();
-            currentImage = capture.getImage();
-            long end = System.nanoTime();
-            long duration = TimeUnit.NANOSECONDS.toMillis(end - start);
-            if (duration > 2)
-                System.out.printf("Capture getImage took %d ms\n", duration);
+        if (Integer.parseInt(evt.getNewValue().toString()) == DSFiltergraph.FRAME_NOTIFY) {
+            this.currentImage = capture.getImage();
         }
     }
 
-    public static void closeAll()
-    {
+    public static void closeAll() {
         Set<Camera> cleanSet = new HashSet<>(activeCameras);
         for (Camera camera : cleanSet) {
-            camera.deactivate();
+            camera.close();
         }
+    }
+
+    public double getAspectRatio() {
+        if (capture == null) {
+            return 4 / 3d;
+        }
+        Dimension size = capture.getDisplaySize();
+        return (double) size.width / (double) size.height;
     }
 }

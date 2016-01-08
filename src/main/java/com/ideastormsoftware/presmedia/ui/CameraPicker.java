@@ -132,7 +132,7 @@ public class CameraPicker extends JDialog {
                     break layoutLoop;
                 }
                 final Camera camera = new Camera(cameraIndex);
-                final RenderPane pane = new RenderPane(ImageUtils.scaleSource(camera));
+                final RenderPane pane = new RenderPane(camera);
                 pane.setName(Integer.toString(cameraIndex++));
                 pane.setBorder(new LineBorder(Color.black, 3));
                 pane.addMouseListener(new MouseAdapter() {

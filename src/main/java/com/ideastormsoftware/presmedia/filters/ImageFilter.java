@@ -16,28 +16,20 @@
 
 package com.ideastormsoftware.presmedia.filters;
 
-import com.ideastormsoftware.presmedia.util.ImageUtils;
-import com.ideastormsoftware.presmedia.sources.ImageSource;
 import com.ideastormsoftware.presmedia.sources.ScaledSource;
-import java.awt.Dimension;
 import java.awt.image.BufferedImage;
+import java.util.function.Supplier;
 
-public abstract class ImageFilter extends ImageSource implements ScaledSource {
-    private ImageSource source;
+public abstract class ImageFilter extends ScaledSource {
 
-    protected abstract BufferedImage filter(BufferedImage source, Dimension targetSize);
+    protected abstract BufferedImage filter(BufferedImage source);
 
     @Override
-    public BufferedImage getScaled(Dimension targetSize) {
-        return filter(source.get(), targetSize);
+    protected void setScaledImage(BufferedImage img) {
+        super.setScaledImage(filter(img));
     }
 
-    public <T extends ImageFilter> T setSource(ImageSource delegate) {
-        this.source = delegate;
-        return (T) this;
-    }
-
-    public ImageSource getSource() {
+    public Supplier<BufferedImage> getSource() {
         return this.source;
     }
 }

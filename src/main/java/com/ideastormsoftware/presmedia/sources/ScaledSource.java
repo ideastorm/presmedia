@@ -15,13 +15,96 @@
  */
 package com.ideastormsoftware.presmedia.sources;
 
+import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  *
  * @author Phillip Hayward <phil@pjhayward.net>
  */
-public interface ScaledSource {
-    public BufferedImage getScaled(Dimension targetSize);
+public class ScaledSource implements Supplier<BufferedImage>, Runnable {
+
+    private static final ExecutorService workerPool = Executors.newCachedThreadPool();
+
+    public Supplier<BufferedImage> source;
+    protected Dimension targetSize = new Dimension(1280, 720);
+    private BufferedImage scaledImage = ImageUtils.emptyImage();
+    private static final long RUN_DELAY = 1000 / 40;
+    private boolean active = true;
+    private boolean shutdown = false;
+    private boolean inPool;
+    private long lastGet = System.currentTimeMillis();
+    private final Object syncPoint = new Object();
+
+    public ScaledSource() {
+
+    }
+
+    public <T extends ScaledSource> T setSource(Supplier<BufferedImage> source) {
+        this.source = source;
+        return (T) this;
+    }
+
+    @Override
+    public BufferedImage get() {
+        synchronized (syncPoint) {
+            lastGet = System.currentTimeMillis();
+            if (!inPool) {
+                workerPool.submit(this);
+                inPool = true;
+            }
+        }
+        return scaledImage;
+    }
+
+    public void setTargetSize(Dimension size) {
+        this.targetSize = size;
+    }
+
+    private void delay(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException ex) {
+            shutdown = true;
+        }
+    }
+
+    private void log(String format, Object... params) {
+        System.out.printf(format + "\n", params);
+    }
+
+    @Override
+    public void run() {
+        boolean shouldExit = false;
+        while (!shutdown && !shouldExit) {
+            synchronized (syncPoint) {
+                shouldExit = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - lastGet) > 5;
+            }
+            long start = System.currentTimeMillis();
+            if (active) {
+                BufferedImage image = source.get();
+                setScaledImage(ImageUtils.copyAspectScaled(image, targetSize));
+            }
+            long delay = RUN_DELAY - (System.currentTimeMillis() - start);
+            if (delay > 0) {
+                delay(delay);
+            }
+        }
+        synchronized (syncPoint) {
+            inPool = false;
+        }
+    }
+
+    public void setActive(boolean b) {
+        this.active = b;
+    }
+
+    protected void setScaledImage(BufferedImage img) {
+        scaledImage = img;
+    }
 }

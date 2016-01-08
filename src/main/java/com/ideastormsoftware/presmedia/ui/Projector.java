@@ -13,27 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.ideastormsoftware.presmedia.ui;
 
 import com.ideastormsoftware.presmedia.sources.ScaledSource;
 import java.awt.Dimension;
 import java.awt.DisplayMode;
+import java.awt.Graphics;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.HeadlessException;
 import java.awt.Toolkit;
-import javax.swing.JFrame;
+import java.awt.Window;
+import java.awt.image.BufferStrategy;
 
-public class Projector extends JFrame {
+public class Projector extends Window {
 
-    RenderPane renderPane;
+    private final ImagePainter painter;
 
     public Projector(ScaledSource source) throws HeadlessException {
-        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        renderPane = new RenderPane(source);
-        add(renderPane);
-        setTitle("Presmedia Projector");
+        super(null);
+        this.painter = new ImagePainter(this.getSize());
+        painter.setup(source, () -> {
+            BufferStrategy strategy = getBufferStrategy();
+            if (strategy != null) {
+                do {
+                    do {
+                        Graphics graphics = strategy.getDrawGraphics();
+                        painter.paint(graphics);
+                        graphics.dispose();
+                    } while (strategy.contentsRestored());
+                    strategy.show();
+                } while (strategy.contentsLost());
+            }
+        });
     }
 
     @Override
@@ -42,6 +54,16 @@ public class Projector extends JFrame {
             moveToSecondaryScreen();
         }
         super.setVisible(visible);
+        if (visible) {
+            createBufferStrategy(2);
+            BufferStrategy strategy = getBufferStrategy();
+            System.out.println("sun.java2d.opengl: " + System.getProperty("sun.java2d.opengl"));
+            System.out.println("Page flipping: " + strategy.getCapabilities().isPageFlipping());
+            System.out.println("Multiple Buffers: " + strategy.getCapabilities().isMultiBufferAvailable());
+            System.out.println("FSEM Required: " + strategy.getCapabilities().isFullScreenRequired());
+            System.out.println("Backbuffer accelerated: " + strategy.getCapabilities().getBackBufferCapabilities().isAccelerated());
+            System.out.println("Frontbuffer accelerated: " + strategy.getCapabilities().getFrontBufferCapabilities().isAccelerated());
+        }
     }
 
     private void moveToSecondaryScreen() {
@@ -55,15 +77,16 @@ public class Projector extends JFrame {
             setSize(currentMode.getWidth(), currentMode.getHeight());
         } else {
             setLocation(0, 0);
-            setSize(640, 480);
+            DisplayMode currentMode = gd[0].getDisplayMode();
+            setSize(currentMode.getWidth(), currentMode.getHeight());
+            painter.setSize(getSize());
+            this.toBack();
         }
-        setUndecorated(multiMonitor);
         setAlwaysOnTop(multiMonitor);
     }
-    
-    public Dimension getRenderSize()
-    {
-        return renderPane.getSize();
-    }           
+
+    public Dimension getRenderSize() {
+        return getSize();
+    }
 
 }

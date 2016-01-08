@@ -23,10 +23,10 @@ import java.awt.image.SampleModel;
 import java.awt.image.WritableRaster;
 
 
-public class Deinterlace extends ImageFilter{
+public class Deinterlace extends ImageFilter {
 
     @Override
-    protected BufferedImage filter(BufferedImage source, Dimension targetScreenSize) {
+    protected BufferedImage filter(BufferedImage source) {
         int w = source.getWidth();
         WritableRaster raster = source.getRaster();
         SampleModel sampleModel = raster.getSampleModel();
@@ -37,7 +37,7 @@ public class Deinterlace extends ImageFilter{
                 raster.setSamples(0, i+1, w, 1, b, mergeRows(topRow, bottomRow));
             }
         }
-        return ImageUtils.copyAspectScaled(source, targetScreenSize);
+        return source;
     }
 
     private int[] mergeRows(int[] firstRow, int[] secondRow)

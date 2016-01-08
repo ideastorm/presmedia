@@ -17,6 +17,7 @@ package com.ideastormsoftware.presmedia.sources;
 
 import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.image.BufferedImage;
+import java.io.Closeable;
 import java.io.FileNotFoundException;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
@@ -29,6 +30,7 @@ import java.nio.ShortBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
@@ -52,7 +54,7 @@ import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
 import org.bytedeco.javacv.FrameGrabber;
 
-public class Media extends ImageSource {
+public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable {
 
     private SourceDataLine mLine;
     private AudioConverter converter;
@@ -78,7 +80,7 @@ public class Media extends ImageSource {
     }
 
     @Override
-    public void activate() {
+    public void start() {
         try {
             openSource();
         } catch (FrameGrabber.Exception ex) {
@@ -87,7 +89,7 @@ public class Media extends ImageSource {
     }
 
     @Override
-    public void deactivate() {
+    public void close() {
         try {
             closeSource();
         } catch (FrameGrabber.Exception ex) {

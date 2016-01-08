@@ -11,6 +11,8 @@ import com.ideastormsoftware.presmedia.sources.Camera;
 import com.ideastormsoftware.presmedia.sources.Media;
 import com.ideastormsoftware.presmedia.util.DisplayFile;
 import java.awt.Color;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
@@ -53,8 +55,14 @@ public class ControlView extends javax.swing.JFrame {
      */
     public ControlView() {
         initComponents();
-        source = new CrossFadeProxySource(new ColorSource());
+        source = new CrossFadeProxySource().setSourceNoFade(new ColorSource());
         projector = new Projector(source);
+        projector.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                source.setTargetSize(projector.getRenderSize());
+            }
+        });
         RenderPane controlPreview = new RenderPane(source);
         outputContainer.add(controlPreview);
         mediaListModel = new DefaultListModel<>();
@@ -564,7 +572,7 @@ public class ControlView extends javax.swing.JFrame {
                     }
                 }
             });
-            preview.setSize(160, 120);
+            preview.setSize(160, (int) (160 / camera.getAspectRatio()));
             preview.setLocation(0, 125 * index++);
             inputPreviews.add(preview);
         }
@@ -743,6 +751,7 @@ public class ControlView extends javax.swing.JFrame {
      * @param args the command line arguments
      */
     public static void main(String args[]) {
+        System.setProperty("sun.java2d.opengl", "true");
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
         /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
@@ -841,28 +850,28 @@ public class ControlView extends javax.swing.JFrame {
                                     return;
                                 }
                             }
-                            source.setDelegate(new Media(selectedMedia.get(mediaIndex).getAbsolutePath(), this));
+                            source.setSource(new Media(selectedMedia.get(mediaIndex).getAbsolutePath(), this));
                         } catch (FrameGrabber.Exception ex) {
                             ex.printStackTrace();
-                            source.setDelegate(new ColorSource());
+                            source.setSource(new ColorSource());
                         }
                     }
                 };
                 if (!selectedMedia.isEmpty()) {
-                    source.setDelegate(new Media(selectedMedia.get(0).getAbsolutePath(), callback));
+                    source.setSource(new Media(selectedMedia.get(0).getAbsolutePath(), callback));
                 }
             } else if (displayCamera.isSelected() && selectedCamera != null) {
                 if (deinterlaceCamera.isSelected()) {
-                    source.setDelegate(new Deinterlace().setSource(selectedCamera));
+                    source.setSource(new Deinterlace().setSource(selectedCamera));
                 } else {
-                    source.setDelegate(selectedCamera);
+                    source.setSource(selectedCamera);
                 }
             } else {
-                source.setDelegate(new ColorSource());
+                source.setSource(new ColorSource());
             }
         } catch (Throwable e) {
             e.printStackTrace();
-            source.setDelegate(new ColorSource());
+            source.setSource(new ColorSource());
         }
     }
 
