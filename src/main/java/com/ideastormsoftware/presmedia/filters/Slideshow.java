@@ -31,11 +31,6 @@ public class Slideshow extends ImageFilter {
         System.out.printf(format + "\n", params);
     }
 
-    @Override
-    public <T extends ScaledSource> T setSource(Supplier<BufferedImage> source) {
-        return super.setSource(ImageUtils::emptyImage);
-    }
-
     private File pickRandomFile() {
         if (unseenImages.isEmpty()) {
             unseenImages.addAll(files);
@@ -54,6 +49,7 @@ public class Slideshow extends ImageFilter {
 
     @Override
     protected BufferedImage filter(BufferedImage img) {
+        img = ImageUtils.emptyImage(targetSize);
         long now = System.currentTimeMillis();
         //if it's time to transition, this will become true
         //  lastTransition is set to now to break out of the loop once we've

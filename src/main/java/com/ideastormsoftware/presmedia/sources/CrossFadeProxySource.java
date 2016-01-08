@@ -34,7 +34,11 @@ public class CrossFadeProxySource extends ScaledSource {
             ((Startable) source).start();
         }
         if (this.source instanceof ImageFilter) {
-            ((ImageFilter) this.source).setSource(source);
+            ImageFilter filterSource = (ImageFilter) this.source;
+            if (filterSource.getSource() instanceof CleanCloseable) {
+                ((CleanCloseable) filterSource.getSource()).close();
+            }
+            filterSource.setSource(source);
         } else {
             if (fadeIntoSource != null) {
                 if (this.source instanceof CleanCloseable) {
@@ -52,7 +56,11 @@ public class CrossFadeProxySource extends ScaledSource {
             ((Startable) source).start();
         }
         if (this.source instanceof ImageFilter) {
-            ((ImageFilter) this.source).setSource(source);
+            ImageFilter filterSource = (ImageFilter) this.source;
+            if (filterSource.getSource() instanceof CleanCloseable) {
+                ((CleanCloseable) filterSource.getSource()).close();
+            }
+            filterSource.setSource(source);
         } else {
             if (this.source instanceof CleanCloseable) {
                 ((CleanCloseable) this.source).close();
@@ -76,6 +84,7 @@ public class CrossFadeProxySource extends ScaledSource {
         if (overlay == null) {
             setFadeSourceInternal(baseSource);
         } else {
+            overlay.setTargetSize(targetSize);
             overlay.setSource(baseSource);
             setFadeSourceInternal(overlay);
         }
@@ -102,7 +111,11 @@ public class CrossFadeProxySource extends ScaledSource {
             float alpha = findAlpha();
             if (alpha >= 1) {
                 alpha = 1;
-                if (this.source instanceof CleanCloseable) {
+                boolean sourceStillActive = false;
+                if (fadeIntoSource instanceof ImageFilter) {
+                    sourceStillActive = ((ImageFilter) fadeIntoSource).getSource().equals(source);
+                }
+                if (this.source instanceof CleanCloseable && !sourceStillActive) {
                     ((CleanCloseable) this.source).close();
                 }
                 source = fadeIntoSource;
