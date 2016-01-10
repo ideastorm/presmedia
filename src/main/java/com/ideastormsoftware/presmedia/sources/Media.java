@@ -522,18 +522,26 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
         public void run() {
             long startTime = System.nanoTime() / 1000;
             long index = 0;
+            boolean skipNext = false;
             while (!canceled && !interrupted()) {
                 try {
                     BufferedImage image = frames.take();
+                    index++;
+                    if (!skipNext)
                     synchronized (imageLock) {
                         currentImage = image;
                     }
-                    index++;
                     double targetTime = startTime + index * interframe;
                     long now = System.nanoTime() / 1000;
+                    if (index % 300 == 10) {
+                        log("Target %01.1f, now %d, delta %01.0f, queue %d", targetTime, now, targetTime - now, frames.size());
+                    }
                     if (now < targetTime) {
                         TimeUnit.MICROSECONDS.sleep((long) (targetTime - now));
+                        skipNext = false;
                     }
+                    else
+                        skipNext = true;
                 } catch (InterruptedException ex) {
                     return;
                 }
