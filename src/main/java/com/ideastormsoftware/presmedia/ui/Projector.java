@@ -34,6 +34,7 @@ public class Projector extends Window {
         super(null);
         this.painter = new ImagePainter(this.getSize());
         painter.setup(source, () -> {
+            Toolkit.getDefaultToolkit().sync();
             BufferStrategy strategy = getBufferStrategy();
             if (strategy != null) {
                 do {

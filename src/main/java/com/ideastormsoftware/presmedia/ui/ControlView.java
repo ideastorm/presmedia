@@ -851,7 +851,7 @@ public class ControlView extends javax.swing.JFrame {
                                 }
                             }
                             source.setSource(new Media(selectedMedia.get(mediaIndex).getAbsolutePath(), this));
-                        } catch (FrameGrabber.Exception ex) {
+                        } catch (Exception ex) {
                             ex.printStackTrace();
                             source.setSource(new ColorSource());
                         }

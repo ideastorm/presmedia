@@ -50,9 +50,6 @@ import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_S32P;
 import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_U8;
 import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_U8P;
 import static org.bytedeco.javacpp.avutil.av_get_sample_fmt_name;
-import org.bytedeco.javacv.FFmpegFrameGrabber;
-import org.bytedeco.javacv.Frame;
-import org.bytedeco.javacv.FrameGrabber;
 
 public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable {
 
@@ -70,7 +67,7 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
                 Thread.currentThread().getName(), String.format(format, params)));
     }
 
-    public Media(String sourceFile, Runnable callback) throws FrameGrabber.Exception {
+    public Media(String sourceFile, Runnable callback) {
         this.sourceFile = sourceFile;
         this.callback = callback;
     }
@@ -81,20 +78,12 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
 
     @Override
     public void start() {
-        try {
-            openSource();
-        } catch (FrameGrabber.Exception ex) {
-            ex.printStackTrace();
-        }
+        openSource();
     }
 
     @Override
     public void close() {
-        try {
-            closeSource();
-        } catch (FrameGrabber.Exception ex) {
-            ex.printStackTrace();
-        }
+        closeSource();
     }
 
     @Override
@@ -104,8 +93,7 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
         }
     }
 
-    private void openJavaSound(FrameGrabber grabber) throws FileNotFoundException {
-        int sampleFormat = grabber.getSampleFormat();
+    private void openJavaSound(int sampleFormat, int audioChannels, float sampleRate) throws FileNotFoundException {
         int bitsPerSample;
         boolean signed;
         switch (sampleFormat) {
@@ -133,22 +121,22 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
                 break;
             case AV_SAMPLE_FMT_S16P:
                 bitsPerSample = 16;
-                converter = new PlanarConverter(bitsPerSample, grabber.getAudioChannels());
+                converter = new PlanarConverter(bitsPerSample, audioChannels);
                 signed = true;
                 break;
             case AV_SAMPLE_FMT_S32P:
                 bitsPerSample = 32;
-                converter = new PlanarIntConverter(grabber.getAudioChannels());
+                converter = new PlanarIntConverter(audioChannels);
                 signed = true;
                 break;
             case AV_SAMPLE_FMT_FLTP:
                 bitsPerSample = 16;
-                converter = new PlanarFltConverter(grabber.getAudioChannels());
+                converter = new PlanarFltConverter(audioChannels);
                 signed = true;
                 break;
             case AV_SAMPLE_FMT_U8P:
                 bitsPerSample = 8;
-                converter = new PlanarConverter(bitsPerSample, grabber.getAudioChannels());
+                converter = new PlanarConverter(bitsPerSample, audioChannels);
                 signed = false;
                 break;
             case AV_SAMPLE_FMT_DBL:
@@ -158,7 +146,7 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
                 break;
             case AV_SAMPLE_FMT_DBLP:
                 bitsPerSample = 16;
-                converter = new PlanarDblConverter(grabber.getAudioChannels());
+                converter = new PlanarDblConverter(audioChannels);
                 signed = true;
                 break;
             default:
@@ -166,12 +154,12 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
                 return;
         }
         audioFormat = new AudioFormat(
-                grabber.getSampleRate(),
+                sampleRate,
                 bitsPerSample,
-                grabber.getAudioChannels(),
+                audioChannels,
                 signed,
                 false);
-        if (grabber.getAudioChannels() > 0) {
+        if (audioChannels > 0) {
             DataLine.Info info = new DataLine.Info(SourceDataLine.class, audioFormat);
             try {
                 mLine = (SourceDataLine) AudioSystem.getLine(info);
@@ -193,14 +181,14 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
 
     private GrabberThread grabber;
 
-    private void openSource() throws FrameGrabber.Exception {
+    private void openSource() {
         log("initializing new processing thread");
         grabber = new GrabberThread();
         grabber.start();
         log("processing thread %s started", grabber.getName());
     }
 
-    private void closeSource() throws FrameGrabber.Exception {
+    private void closeSource() {
         try {
             log("shutting down processing thread");
             if (grabber != null) {
@@ -223,11 +211,6 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
     private class GrabberThread extends Thread {
 
         private volatile boolean canceled = false;
-        private final BlockingQueue<BufferedImage> frameQueue;
-
-        private GrabberThread() {
-            this.frameQueue = new ArrayBlockingQueue<BufferedImage>(256);
-        }
 
         @Override
         public void run() {
@@ -235,12 +218,18 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
             boolean normalExit = false;
             AudioThread audioThread = new AudioThread();
             VideoThread videoThread = new VideoThread();
+            Stats audioStats = new Stats();
+            Stats videoStats = new Stats();
+            Stats audioBuffer = new Stats();
+            Stats videoBuffer = new Stats();
+            Stats audioProcessing = new Stats();
+            Stats videoProcessing = new Stats();
             try {
                 try {
                     FFmpegFrameGrabber ffmpeg = FFmpegFrameGrabber.createDefault(getSourceFile());
                     try {
                         ffmpeg.start();
-                        openJavaSound(ffmpeg);
+                        openJavaSound(ffmpeg.getSampleFormat(), ffmpeg.getAudioChannels(), ffmpeg.getSampleRate());
                         log("sound system initialized");
                         videoThread.setFrameRate(ffmpeg.getFrameRate());
                         boolean started = false;
@@ -248,14 +237,22 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
                         boolean gotVideo = ffmpeg.getVideoBitrate() == 0; //same for video
                         while (!canceled && !interrupted()) {
                             try {
+                                long start = System.nanoTime();
                                 Frame frame = ffmpeg.grabFrame();
+                                long captureTime = System.nanoTime() - start;
                                 if (frame != null) {
+                                    audioBuffer.addValue(audioThread.samples.size());
+                                    videoBuffer.addValue(videoThread.frames.size());
                                     if (frame.samples != null) {
+                                        audioStats.addValue(captureTime);
                                         audioThread.samples.put(converter.prepareSamplesForPlayback(frame.samples));
+                                        audioProcessing.addValue(System.nanoTime() - start);
                                         gotAudio = true;
                                     }
                                     if (frame.image != null) {
-                                        videoThread.frames.put(ImageUtils.copy(frame.image.getBufferedImage()));
+                                        videoStats.addValue(captureTime);
+                                        videoThread.frames.put(ImageUtils.copy(frame.image));
+                                        videoProcessing.addValue(System.nanoTime() - start);
                                         gotVideo = true;
                                     }
                                 } else {
@@ -267,14 +264,14 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
                                     videoThread.start();
                                     started = true;
                                 }
-                            } catch (FrameGrabber.Exception e) {
+                            } catch (InterruptedException ex) {
+                                log("got interrupted");
+                                return;
+                            } catch (Exception e) {
                                 e.printStackTrace();
                                 synchronized (imageLock) {
                                     currentImage = ImageUtils.emptyImage();
                                 }
-                            } catch (InterruptedException ex) {
-                                log("got interrupted");
-                                return;
                             }
                         }
                         if (normalExit) {
@@ -297,14 +294,17 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
                         closeJavaSound();
                         log("processing thread terminated");
                     }
-                    log("post finally");
                 } catch (Throwable ex) {
-                    log("in catch");
                     ex.printStackTrace();
                 }
 
-                log("post catch");
             } finally {
+                log("Audio frames:\n\tmin: %d\n\tmax: %d\n\tavg: %d\n\tcount: %d", audioStats.getMin(), audioStats.getMax(), audioStats.getAverage(), audioStats.getCount());
+                log("Video frames:\n\tmin: %d\n\tmax: %d\n\tavg: %d\n\tcount: %d", videoStats.getMin(), videoStats.getMax(), videoStats.getAverage(), videoStats.getCount());
+                log("Audio buffer:\n\tmin: %d\n\tmax: %d\n\tavg: %d\n\tcount: %d", audioBuffer.getMin(), audioBuffer.getMax(), audioBuffer.getAverage(), audioBuffer.getCount());
+                log("Video buffer:\n\tmin: %d\n\tmax: %d\n\tavg: %d\n\tcount: %d", videoBuffer.getMin(), videoBuffer.getMax(), videoBuffer.getAverage(), videoBuffer.getCount());
+                log("Audio processing:\n\tmin: %d\n\tmax: %d\n\tavg: %d\n\tcount: %d", audioProcessing.getMin(), audioProcessing.getMax(), audioProcessing.getAverage(), audioProcessing.getCount());
+                log("Video processing:\n\tmin: %d\n\tmax: %d\n\tavg: %d\n\tcount: %d", videoProcessing.getMin(), videoProcessing.getMax(), videoProcessing.getAverage(), videoProcessing.getCount());
                 log("exited thread lock - ready to go with the next thread");
                 if (normalExit) {
                     callback.run();
@@ -522,26 +522,18 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
         public void run() {
             long startTime = System.nanoTime() / 1000;
             long index = 0;
-            boolean skipNext = false;
             while (!canceled && !interrupted()) {
                 try {
                     BufferedImage image = frames.take();
-                    index++;
-                    if (!skipNext)
                     synchronized (imageLock) {
                         currentImage = image;
                     }
+                    index++;
                     double targetTime = startTime + index * interframe;
                     long now = System.nanoTime() / 1000;
-                    if (index % 300 == 10) {
-                        log("Target %01.1f, now %d, delta %01.0f, queue %d", targetTime, now, targetTime - now, frames.size());
-                    }
                     if (now < targetTime) {
                         TimeUnit.MICROSECONDS.sleep((long) (targetTime - now));
-                        skipNext = false;
                     }
-                    else
-                        skipNext = true;
                 } catch (InterruptedException ex) {
                     return;
                 }
