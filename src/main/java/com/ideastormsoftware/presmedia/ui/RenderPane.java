@@ -15,11 +15,11 @@
  */
 package com.ideastormsoftware.presmedia.ui;
 
+import com.ideastormsoftware.presmedia.sources.ImageSource;
 import com.ideastormsoftware.presmedia.sources.ScaledSource;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.HeadlessException;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -29,40 +29,56 @@ import javax.swing.JPanel;
 import javax.swing.border.Border;
 
 public class RenderPane extends JPanel {
-    
+
     private final ImagePainter painter;
     
-    public RenderPane(Supplier<BufferedImage> imgSupplier) throws HeadlessException {
+    public RenderPane(Supplier<BufferedImage> imgSupplier, Supplier<Double> fpsSupplier)
+    {
+        this(new ImageSource() {
+
+            @Override
+            public double getFps() {
+                return fpsSupplier.get();
+            }
+
+            @Override
+            public BufferedImage get() {
+                return imgSupplier.get();
+            }
+        });
+    }
+
+    public RenderPane(ImageSource imgSupplier) throws HeadlessException {
         setBackground(Color.black);
         setSize(320, 240);
         setDoubleBuffered(true);
         ScaledSource source = new ScaledSource().setSource(imgSupplier);
         source.setTargetSize(new Dimension(getWidth(), getHeight()));
         addComponentListener(new ComponentAdapter() {
-            
+
             @Override
             public void componentHidden(ComponentEvent e) {
                 source.setActive(false);
             }
-            
+
             @Override
             public void componentShown(ComponentEvent e) {
                 source.setActive(true);
             }
-            
+
             @Override
             public void componentResized(ComponentEvent e) {
                 source.setTargetSize(new Dimension(getWidth(), getHeight()));
                 painter.setSize(getSize());
             }
         });
-        
+
         painter = new ImagePainter(getSize());
-        painter.setup(source, () -> {
+        painter.setup(source, imgSupplier::getFps, () -> {
             repaint(1);
         });
     }
-    
+
     @Override
     public void paint(Graphics grphcs) {
         painter.paint(grphcs);

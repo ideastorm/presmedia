@@ -57,6 +57,7 @@ public class ControlView extends javax.swing.JFrame {
         initComponents();
         source = new CrossFadeProxySource().setSourceNoFade(new ColorSource());
         projector = new Projector(source);
+        projector.setFrameCallback((fps)->projectorFps.setText(String.format("Projector FPS: %01.1f",fps)));
         projector.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
@@ -136,6 +137,7 @@ public class ControlView extends javax.swing.JFrame {
         loadSettings = new javax.swing.JButton();
         loopMedia = new javax.swing.JCheckBox();
         deinterlaceCamera = new javax.swing.JCheckBox();
+        projectorFps = new javax.swing.JLabel();
 
         setTitle("Presmedia Control");
 
@@ -379,7 +381,7 @@ public class ControlView extends javax.swing.JFrame {
                 .addContainerGap()
                 .addComponent(jLabel5)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 122, Short.MAX_VALUE)
+                .addComponent(jScrollPane1)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(addName)
@@ -451,6 +453,8 @@ public class ControlView extends javax.swing.JFrame {
 
         deinterlaceCamera.setText("Deinterlace Video");
 
+        projectorFps.setText("Projector FPS: 30.0");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -487,15 +491,17 @@ public class ControlView extends javax.swing.JFrame {
                     .addComponent(jLabel4))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(0, 0, Short.MAX_VALUE)
-                        .addComponent(saveSettings)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(loadSettings))
                     .addComponent(outputContainer, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jLabel2)
-                        .addGap(0, 0, Short.MAX_VALUE)))
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addGap(0, 84, Short.MAX_VALUE)
+                        .addComponent(saveSettings)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(projectorFps, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(loadSettings, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -528,8 +534,10 @@ public class ControlView extends javax.swing.JFrame {
                             .addComponent(displayMedia)))
                     .addComponent(jPanel2, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
-                        .addComponent(outputContainer, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(outputContainer, javax.swing.GroupLayout.PREFERRED_SIZE, 526, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(projectorFps)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(loadSettings)
                             .addComponent(saveSettings))))
@@ -555,7 +563,7 @@ public class ControlView extends javax.swing.JFrame {
         int index = 0;
         for (Integer cameraIndex : cameras) {
             final Camera camera = new Camera(cameraIndex);
-            final RenderPane preview = new RenderPane(ImageUtils.scaleSource(camera));
+            final RenderPane preview = new RenderPane(ImageUtils.scaleSource(camera),camera::getFps);
             preview.setBorder(new LineBorder(Color.black, 2));
             preview.addMouseListener(new MouseAdapter() {
                 @Override
@@ -818,6 +826,7 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JList mediaList;
     private javax.swing.JList nameList;
     private javax.swing.JPanel outputContainer;
+    private javax.swing.JLabel projectorFps;
     private javax.swing.JButton removeMedia;
     private javax.swing.JButton removeName;
     private javax.swing.JButton removeSlideshow;

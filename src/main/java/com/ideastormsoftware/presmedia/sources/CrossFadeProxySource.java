@@ -22,11 +22,12 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.function.Supplier;
 
-public class CrossFadeProxySource extends ScaledSource {
+public class CrossFadeProxySource extends ScaledSource implements ImageSource {
 
     private Supplier<BufferedImage> fadeIntoSource;
     private static final double fadeDuration = 0.5;
     private long fadeStartTime;
+    private final Stats stats = new Stats();
 
     @Override
     public <T extends ScaledSource> T setSource(Supplier<BufferedImage> source) {
@@ -102,6 +103,7 @@ public class CrossFadeProxySource extends ScaledSource {
 
     @Override
     protected void setScaledImage(BufferedImage img) {
+        long startTime = System.nanoTime();
         BufferedImage baseImage = ImageUtils.emptyImage(targetSize);
         Graphics2D g = baseImage.createGraphics();
         BufferedImage original = img;
@@ -124,6 +126,12 @@ public class CrossFadeProxySource extends ScaledSource {
             g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
             ImageUtils.drawAspectScaled(g, overlayImage, targetSize);
         }
+        stats.addValue(System.nanoTime()-startTime);
         super.setScaledImage(baseImage);
+    }
+
+    @Override
+    public double getFps() {
+        return stats.getRate();
     }
 }

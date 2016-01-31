@@ -21,8 +21,19 @@ public class Stats {
     private long max = 0;
     private long sum = 0;
     private int count = 0;
+    private Long startTimestamp = null;
+
+    public void reset() {
+        min = Long.MAX_VALUE;
+        max = 0;
+        sum = 0;
+        count = 0;
+        startTimestamp = null;
+    }
 
     public void addValue(long value) {
+        if (startTimestamp == null)
+            startTimestamp = System.currentTimeMillis();
         if (value < min) {
             min = value;
         }
@@ -52,5 +63,18 @@ public class Stats {
     public long getAverage() {
         return sum / count;
     }
-
+    
+    public double getRate() {
+        if (startTimestamp == null)
+            return 0;
+        long currentTime = System.currentTimeMillis();
+        long totalTime = currentTime - startTimestamp;
+        return count / (totalTime * 0.001);
+    }
+    
+    public void report(String title)
+    {
+        boolean saturated = 1_000_000_000 / getRate() <= getAverage();
+        System.out.printf("%s:\n\tmin: %d\n\tmax: %d\n\tavg: %d\n\tcount: %d\n\trate: %01.2f\n\tsaturated: %s\n", title, getMin(), getMax(), getAverage(), getCount(), getRate(), String.valueOf(saturated));
+    }
 }

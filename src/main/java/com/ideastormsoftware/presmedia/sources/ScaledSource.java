@@ -18,8 +18,6 @@ package com.ideastormsoftware.presmedia.sources;
 import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -29,17 +27,16 @@ import java.util.function.Supplier;
  */
 public class ScaledSource implements Supplier<BufferedImage>, Runnable {
 
-    private static final ExecutorService workerPool = Executors.newCachedThreadPool();
-
     public Supplier<BufferedImage> source;
     protected Dimension targetSize = new Dimension(1280, 720);
     private BufferedImage scaledImage = ImageUtils.emptyImage();
-    private static final long RUN_DELAY = 1000 / 40;
+    private static final long RUN_DELAY = 1000 / 30;
     private boolean active = true;
     private boolean shutdown = false;
-    private boolean inPool;
     private long lastGet = System.currentTimeMillis();
     private final Object syncPoint = new Object();
+    private Thread workerThread = null;
+    
 
     public ScaledSource() {
 
@@ -54,9 +51,9 @@ public class ScaledSource implements Supplier<BufferedImage>, Runnable {
     public BufferedImage get() {
         synchronized (syncPoint) {
             lastGet = System.currentTimeMillis();
-            if (!inPool) {
-                workerPool.submit(this);
-                inPool = true;
+            if (workerThread == null) {
+                workerThread = new Thread(this, getClass().getSimpleName());
+                workerThread.start();
             }
         }
         return scaledImage;
@@ -96,7 +93,7 @@ public class ScaledSource implements Supplier<BufferedImage>, Runnable {
             }
         }
         synchronized (syncPoint) {
-            inPool = false;
+            workerThread = null;
         }
     }
 

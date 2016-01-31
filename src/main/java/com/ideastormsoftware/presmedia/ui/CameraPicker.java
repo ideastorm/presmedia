@@ -13,23 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.ideastormsoftware.presmedia.ui;
 
-import com.ideastormsoftware.presmedia.util.ImageUtils;
 import com.ideastormsoftware.presmedia.sources.Camera;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.HashSet;
 import java.util.Set;
+import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JPanel;
 import javax.swing.border.LineBorder;
 
 public class CameraPicker extends JDialog {
@@ -132,6 +133,7 @@ public class CameraPicker extends JDialog {
                     break layoutLoop;
                 }
                 final Camera camera = new Camera(cameraIndex);
+                JPanel container = new JPanel();
                 final RenderPane pane = new RenderPane(camera);
                 pane.setName(Integer.toString(cameraIndex++));
                 pane.setBorder(new LineBorder(Color.black, 3));
@@ -148,9 +150,24 @@ public class CameraPicker extends JDialog {
                         }
                     }
                 });
-                add(pane);
-                pane.setSize(previewWidth, previewHeight);
-                pane.setLocation(5 + (previewWidth + 5) * x, 5 + (previewHeight + 5) * y);
+                add(container);
+                container.add(pane);
+                container.setSize(previewWidth, previewHeight);
+                container.setLocation(5 + (previewWidth + 5) * x, 5 + (previewHeight + 5) * y);
+
+                int buttonOffset = 5;
+                for (Integer dialogId : camera.supportedDialogs()) {
+                    JButton button = new JButton(camera.getDialogName(dialogId));
+                    button.addActionListener((ActionEvent e) -> {
+                        camera.showConfig(dialogId);
+                    });
+                    container.add(button);
+                    button.setLocation(buttonOffset, previewHeight - 35);
+                    button.setSize(new Dimension(160, 25));
+                    buttonOffset += button.getWidth() + 5;
+                }
+                pane.setLocation(0, 0);
+                pane.setSize(previewWidth, buttonOffset > 5 ? previewHeight - 40 : previewHeight);
             }
         }
     }

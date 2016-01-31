@@ -17,24 +17,35 @@ package com.ideastormsoftware.presmedia.sources;
 
 import com.ideastormsoftware.presmedia.util.ImageUtils;
 import de.humatic.dsj.DSCapture;
+import de.humatic.dsj.DSEnvironment;
 import de.humatic.dsj.DSFilterInfo;
 import de.humatic.dsj.DSFiltergraph;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 
-public class Camera implements Supplier<BufferedImage>, PropertyChangeListener {
+public class Camera implements ImageSource, PropertyChangeListener {
 
     private static final Set<Camera> activeCameras = new HashSet<>();
     private static final List<DSFilterInfo> cameraInfo = new ArrayList<>();
     private final DSFilterInfo deviceInfo;
+    private final Stats captureStats = new Stats();
+    private final DSCapture capture;
+    private BufferedImage currentImage = ImageUtils.emptyImage();
+
+    static {
+        DSEnvironment.unlockDLL("phil@pjhayward.net", 753608, 1702561, 0);
+    }
+
+    private void log(String format, Object... params) {
+        System.out.printf(format + "\n", params);
+    }
 
     public static int availableCameras() {
         cameraInfo.clear();
@@ -47,9 +58,6 @@ public class Camera implements Supplier<BufferedImage>, PropertyChangeListener {
         return cameraInfo.size();
     }
 
-    private final DSCapture capture;
-    private BufferedImage currentImage = ImageUtils.emptyImage();
-
     public Camera(Integer cameraIndex) {
         deviceInfo = cameraInfo.get(cameraIndex);
         System.out.printf("Attempting to start %s\n", deviceInfo.toString());
@@ -57,7 +65,52 @@ public class Camera implements Supplier<BufferedImage>, PropertyChangeListener {
         activeCameras.add(this);
     }
 
+    public Set<Integer> supportedDialogs() {
+        Set<Integer> dialogs = new HashSet<>();
+        int supported = capture.getActiveVideoDevice().getSupportedDialogs();
+        int check = 1;
+        for (int i = 0; i < 10; i++) {
+            if ((supported & check) == check) {
+                dialogs.add(check);
+            }
+            check *= 2;
+        }
+        return dialogs;
+    }
+
+    public String getDialogName(int dialogId) {
+        switch (dialogId) {
+            case 1:
+                return "VFW Source";
+            case 2:
+                return "VFW Format";
+            case 8:
+                return "WDM Device";
+            case 16:
+                return "WDM Capture";
+            case 32:
+                return "WDM Preview";
+            case 64:
+                return "Crossbar 1";
+            case 128:
+                return "Crossbar 2";
+            case 256:
+                return "TV Video";
+            case 512:
+                return "TV Audio";
+        }
+        return "Unknown";
+    }
+
+    public void showConfig(int dialogId) {
+        DSCapture.CaptureDevice device = capture.getActiveVideoDevice();
+        captureStats.report("Image capture");
+        device.showDialog(dialogId);
+        captureStats.reset();
+    }
+
     public void close() {
+        captureStats.report("Image capture");
         capture.dispose();
         activeCameras.remove(this);
     }
@@ -68,9 +121,22 @@ public class Camera implements Supplier<BufferedImage>, PropertyChangeListener {
     }
 
     @Override
+    public double getFps() {
+        return captureStats.getRate();
+    }
+    
+    @Override
     public void propertyChange(PropertyChangeEvent evt) {
-        if (Integer.parseInt(evt.getNewValue().toString()) == DSFiltergraph.FRAME_NOTIFY) {
-            this.currentImage = capture.getImage();
+        switch (Integer.parseInt(evt.getNewValue().toString())) {
+            case DSFiltergraph.GRAPH_EVENT:
+            case DSFiltergraph.KF_NOTIFY:
+            case DSFiltergraph.FRAME_NOTIFY:
+                long start = System.nanoTime();
+                this.currentImage = capture.getImage();
+                captureStats.addValue(System.nanoTime() - start);
+                break;
+            default:
+                System.out.println("Got event for value " + evt.getNewValue().toString());
         }
     }
 

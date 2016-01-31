@@ -27,7 +27,7 @@ import org.imgscalr.Scalr;
 
 public final class ImageUtils {
     
-    private static final Scalr.Method method = Scalr.Method.valueOf(System.getProperty("scalr.method", "BALANCED"));
+    private static final Scalr.Method method = Scalr.Method.valueOf(System.getProperty("scalr.method", "SPEED"));
 
     public static BufferedImage copy(BufferedImage img) {
         BufferedImage copy = new BufferedImage(img.getWidth(), img.getHeight(), img.getType());

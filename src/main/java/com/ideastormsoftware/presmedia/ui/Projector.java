@@ -25,15 +25,17 @@ import java.awt.HeadlessException;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.image.BufferStrategy;
+import java.util.function.Consumer;
 
 public class Projector extends Window {
 
     private final ImagePainter painter;
+    private Consumer<Double> frameCallback;
 
     public Projector(ScaledSource source) throws HeadlessException {
         super(null);
         this.painter = new ImagePainter(this.getSize());
-        painter.setup(source, () -> {
+        painter.setup(source, null, () -> {
             Toolkit.getDefaultToolkit().sync();
             BufferStrategy strategy = getBufferStrategy();
             if (strategy != null) {
@@ -46,9 +48,15 @@ public class Projector extends Window {
                     strategy.show();
                 } while (strategy.contentsLost());
             }
+            frameCallback.accept(painter.getFps());
         });
     }
-
+    
+    public void setFrameCallback(Consumer<Double> callback)
+    {
+        this.frameCallback = callback;
+    }
+    
     @Override
     public void setVisible(boolean visible) {
         if (visible) {
@@ -80,9 +88,9 @@ public class Projector extends Window {
             setLocation(0, 0);
             DisplayMode currentMode = gd[0].getDisplayMode();
             setSize(currentMode.getWidth(), currentMode.getHeight());
-            painter.setSize(getSize());
             this.toBack();
         }
+        painter.setSize(getSize());
         setAlwaysOnTop(multiMonitor);
     }
 

@@ -297,14 +297,13 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
                 } catch (Throwable ex) {
                     ex.printStackTrace();
                 }
-
             } finally {
-                log("Audio frames:\n\tmin: %d\n\tmax: %d\n\tavg: %d\n\tcount: %d", audioStats.getMin(), audioStats.getMax(), audioStats.getAverage(), audioStats.getCount());
-                log("Video frames:\n\tmin: %d\n\tmax: %d\n\tavg: %d\n\tcount: %d", videoStats.getMin(), videoStats.getMax(), videoStats.getAverage(), videoStats.getCount());
-                log("Audio buffer:\n\tmin: %d\n\tmax: %d\n\tavg: %d\n\tcount: %d", audioBuffer.getMin(), audioBuffer.getMax(), audioBuffer.getAverage(), audioBuffer.getCount());
-                log("Video buffer:\n\tmin: %d\n\tmax: %d\n\tavg: %d\n\tcount: %d", videoBuffer.getMin(), videoBuffer.getMax(), videoBuffer.getAverage(), videoBuffer.getCount());
-                log("Audio processing:\n\tmin: %d\n\tmax: %d\n\tavg: %d\n\tcount: %d", audioProcessing.getMin(), audioProcessing.getMax(), audioProcessing.getAverage(), audioProcessing.getCount());
-                log("Video processing:\n\tmin: %d\n\tmax: %d\n\tavg: %d\n\tcount: %d", videoProcessing.getMin(), videoProcessing.getMax(), videoProcessing.getAverage(), videoProcessing.getCount());
+                audioStats.report("Audio frames");
+                videoStats.report("Video frames");
+                audioBuffer.report("Audio buffer");
+                videoBuffer.report("Video buffer");
+                audioProcessing.report("Audio processing");
+                videoProcessing.report("Video processing");
                 log("exited thread lock - ready to go with the next thread");
                 if (normalExit) {
                     callback.run();

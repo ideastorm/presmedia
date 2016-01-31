@@ -21,6 +21,9 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
+import java.util.ArrayDeque;
+import java.util.Queue;
+import java.util.function.Supplier;
 
 public class ImagePainter {
 
@@ -33,14 +36,20 @@ public class ImagePainter {
     private LoopingThread timer;
     private int width;
     private int height;
+    private Supplier<Double> fpsSource;
 
     ImagePainter(Dimension size) {
         this.width = (int) size.getWidth();
         this.height = (int) size.getHeight();
     }
 
-    public void setup(ScaledSource source, Runnable callback) {
-        this.timer = new LoopingThread(1000 / 40, () -> {
+    public double getFps() {
+        return timer.getRate();
+    }
+
+    public void setup(ScaledSource source, Supplier<Double> fpsSource, Runnable callback) {
+        this.fpsSource = fpsSource;
+        this.timer = new LoopingThread(1000 / 30d, () -> {
             synchronized (imageLock) {
                 nextImage = source.get();
             }
@@ -63,19 +72,30 @@ public class ImagePainter {
             Point offset = new Point((width - img.getWidth()) / 2, (height - img.getHeight()) / 2);
             g.drawImage(img, offset.x, offset.y, null);
         }
+        if (fpsSource != null) {
+//        String fps = String.format("FPS: %01.1f Delay: %01.1f %s", timer.getRate(), timer.getLastDelay(), sourceFps);
+            String fps = String.format("FPS: %01.1f SRC FPS: %01.1f", timer.getRate(), fpsSource.get());
+            g.setColor(Color.black);
+            g.drawString(fps, 5, height - 16);
+            g.setColor(Color.white);
+            g.drawString(fps, 6, height - 15);
+        }
     }
 
     void setSize(Dimension size) {
         this.width = (int) size.getWidth();
         this.height = (int) size.getHeight();
+
     }
 
     private static class LoopingThread extends Thread {
 
-        private final long minimumDelayMillis;
+        private final double minimumDelayMillis;
         private final Runnable task;
+        private Queue<Long> startTimes = new ArrayDeque<>();
+        private long lastDelay;
 
-        LoopingThread(long minDelayMs, Runnable task) {
+        LoopingThread(double minDelayMs, Runnable task) {
             this.minimumDelayMillis = minDelayMs;
             this.task = task;
         }
@@ -86,11 +106,23 @@ public class ImagePainter {
             Thread.sleep(millis, remainingNanos);
         }
 
+        public double getRate() {
+            return startTimes.size() / ((System.nanoTime() - startTimes.peek()) / 1_000_000_000.0);
+        }
+
+        public double getLastDelay() {
+            return lastDelay / 1_000_000d; //convert to millis
+        }
+
         @Override
         public void run() {
             try {
                 while (true) {
                     long runStart = System.nanoTime();
+                    startTimes.offer(runStart);
+                    while (startTimes.peek() < runStart - 1_000_000_000) {
+                        startTimes.poll();
+                    }
                     try {
                         task.run();
                     } catch (Exception e) {
@@ -98,9 +130,12 @@ public class ImagePainter {
                         e.printStackTrace();
                     }
                     long runEnd = System.nanoTime();
-                    long delay = minimumDelayMillis * 1_000_000 - (runEnd - runStart);
+                    long delay = (long) (minimumDelayMillis * 1_000_000) - (runEnd - runStart);
                     if (delay > 0) {
+                        lastDelay = delay;
                         delay(delay);
+                    } else {
+                        lastDelay = 0;
                     }
                 }
             } catch (InterruptedException e) {
