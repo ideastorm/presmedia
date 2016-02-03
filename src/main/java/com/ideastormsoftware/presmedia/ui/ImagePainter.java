@@ -107,6 +107,8 @@ public class ImagePainter {
         }
 
         public double getRate() {
+            if (startTimes.isEmpty())
+                return 0;
             return startTimes.size() / ((System.nanoTime() - startTimes.peek()) / 1_000_000_000.0);
         }
 
