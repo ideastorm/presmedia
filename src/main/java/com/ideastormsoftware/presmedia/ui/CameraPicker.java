@@ -132,7 +132,7 @@ public class CameraPicker extends JDialog {
                 if (cameraIndex >= cameraCount) {
                     break layoutLoop;
                 }
-                final Camera camera = new Camera(cameraIndex);
+                final Camera camera = Camera.getCamera(cameraIndex);
                 JPanel container = new JPanel();
                 final RenderPane pane = new RenderPane(camera);
                 pane.setName(Integer.toString(cameraIndex++));

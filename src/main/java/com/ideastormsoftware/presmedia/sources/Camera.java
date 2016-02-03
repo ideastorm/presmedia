@@ -28,12 +28,26 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Supplier;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Camera implements ImageSource, PropertyChangeListener {
 
-    private static final Set<Camera> activeCameras = new HashSet<>();
+    private static final ConcurrentHashMap<Integer, Camera> cameras = new ConcurrentHashMap<>();
     private static final List<DSFilterInfo> cameraInfo = new ArrayList<>();
+
+    public static Camera getCamera(int cameraIndex) {
+        return cameras.computeIfAbsent(cameraIndex, Camera::new);
+    }
+
+    public static void closeAllExcept(Set<Integer> cameraIndices) {
+        Set<Camera> active = new HashSet<>(cameras.values());
+        for (Camera cam : active) {
+            if (!cameraIndices.contains(cam.cameraIndex)) {
+                cam.close();
+            }
+        }
+    }
+
     private final DSFilterInfo deviceInfo;
     private final Stats captureStats = new Stats();
     private final DSCapture capture;
@@ -42,27 +56,29 @@ public class Camera implements ImageSource, PropertyChangeListener {
     static {
         DSEnvironment.unlockDLL("phil@pjhayward.net", 753608, 1702561, 0);
     }
+    private final Integer cameraIndex;
 
     private void log(String format, Object... params) {
         System.out.printf(format + "\n", params);
     }
 
     public static int availableCameras() {
-        cameraInfo.clear();
-        DSFilterInfo[][] filterInfo = DSCapture.queryDevices();
-        for (DSFilterInfo capInfo : filterInfo[0]) {
-            if (!"none".equals(capInfo.getCLSID())) {
-                cameraInfo.add(capInfo);
+        if (cameraInfo.isEmpty()) {
+            DSFilterInfo[][] filterInfo = DSCapture.queryDevices();
+            for (DSFilterInfo capInfo : filterInfo[0]) {
+                if (!"none".equals(capInfo.getCLSID())) {
+                    cameraInfo.add(capInfo);
+                }
             }
         }
         return cameraInfo.size();
     }
 
-    public Camera(Integer cameraIndex) {
+    private Camera(Integer cameraIndex) {
+        this.cameraIndex = cameraIndex;
         deviceInfo = cameraInfo.get(cameraIndex);
         System.out.printf("Attempting to start %s\n", deviceInfo.toString());
         capture = new DSCapture(DSFiltergraph.JAVA_POLL | DSFiltergraph.FRAME_CALLBACK, deviceInfo, false, DSFilterInfo.doNotRender(), this);
-        activeCameras.add(this);
     }
 
     public Set<Integer> supportedDialogs() {
@@ -112,7 +128,7 @@ public class Camera implements ImageSource, PropertyChangeListener {
     public void close() {
         captureStats.report("Image capture");
         capture.dispose();
-        activeCameras.remove(this);
+        cameras.remove(cameraIndex);
     }
 
     @Override
@@ -124,7 +140,7 @@ public class Camera implements ImageSource, PropertyChangeListener {
     public double getFps() {
         return captureStats.getRate();
     }
-    
+
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
         switch (Integer.parseInt(evt.getNewValue().toString())) {
@@ -141,7 +157,7 @@ public class Camera implements ImageSource, PropertyChangeListener {
     }
 
     public static void closeAll() {
-        Set<Camera> cleanSet = new HashSet<>(activeCameras);
+        Set<Camera> cleanSet = new HashSet<>(cameras.values());
         for (Camera camera : cleanSet) {
             camera.close();
         }

@@ -557,12 +557,12 @@ public class ControlView extends javax.swing.JFrame {
         final CameraPicker cameraPicker = new CameraPicker();
         cameraPicker.setVisible(true);
         Set<Integer> cameras = cameraPicker.getSelectedCameras();
-        Camera.closeAll();
+        Camera.closeAllExcept(cameras);
         inputPreviews.removeAll();
         inputPreviews.repaint();
         int index = 0;
         for (Integer cameraIndex : cameras) {
-            final Camera camera = new Camera(cameraIndex);
+            final Camera camera = Camera.getCamera(cameraIndex);
             final RenderPane preview = new RenderPane(ImageUtils.scaleSource(camera),camera::getFps);
             preview.setBorder(new LineBorder(Color.black, 2));
             preview.addMouseListener(new MouseAdapter() {
