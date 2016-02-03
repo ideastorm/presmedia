@@ -25,4 +25,5 @@ public class Frame {
     public Buffer[] samples; // for audio frame
     public int sampleRate;
     public int audioChannels;
+    public long timestamp;
 }

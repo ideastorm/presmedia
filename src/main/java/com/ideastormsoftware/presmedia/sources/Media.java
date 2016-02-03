@@ -17,7 +17,6 @@ package com.ideastormsoftware.presmedia.sources;
 
 import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.image.BufferedImage;
-import java.io.Closeable;
 import java.io.FileNotFoundException;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
@@ -30,6 +29,7 @@ import java.nio.ShortBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
@@ -216,8 +216,8 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
         public void run() {
             log("Media processing thread initialized");
             boolean normalExit = false;
-            AudioThread audioThread = new AudioThread();
             VideoThread videoThread = new VideoThread();
+            AudioThread audioThread = new AudioThread(videoThread::setAudioTimestamp);
             Stats audioStats = new Stats();
             Stats videoStats = new Stats();
             Stats audioBuffer = new Stats();
@@ -245,13 +245,13 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
                                     videoBuffer.addValue(videoThread.frames.size());
                                     if (frame.samples != null) {
                                         audioStats.addValue(captureTime);
-                                        audioThread.samples.put(converter.prepareSamplesForPlayback(frame.samples));
+                                        audioThread.samples.put(new DataFrame(converter.prepareSamplesForPlayback(frame.samples), frame.timestamp));
                                         audioProcessing.addValue(System.nanoTime() - start);
                                         gotAudio = true;
                                     }
                                     if (frame.image != null) {
                                         videoStats.addValue(captureTime);
-                                        videoThread.frames.put(ImageUtils.copy(frame.image));
+                                        videoThread.frames.put(new DataFrame(ImageUtils.copy(frame.image), frame.timestamp));
                                         videoProcessing.addValue(System.nanoTime() - start);
                                         gotVideo = true;
                                     }
@@ -514,28 +514,61 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
     private class VideoThread extends Thread {
 
         volatile boolean canceled = false;
-        private final BlockingQueue<BufferedImage> frames = new ArrayBlockingQueue<>(256);
+        private final BlockingQueue<DataFrame<BufferedImage>> frames = new ArrayBlockingQueue<>(256);
         private double interframe = 1_000_000.0 / 29.97; //target microseconds per frame
+        private long currentAudioTimestamp;
+        private final Stats closeMatch = new Stats();
+        private final Stats fastVideo = new Stats();
+        private final Stats slowVideo = new Stats();
+
+        synchronized void setAudioTimestamp(long timestamp) {
+            currentAudioTimestamp = timestamp;
+        }
+
+        synchronized long getAudioTimestamp() {
+            return currentAudioTimestamp;
+        }
 
         @Override
         public void run() {
-            long startTime = System.nanoTime() / 1000;
-            long index = 0;
-            while (!canceled && !interrupted()) {
-                try {
-                    BufferedImage image = frames.take();
-                    synchronized (imageLock) {
-                        currentImage = image;
+            long lastFrame = System.nanoTime() / 1000;
+            try {
+                while (!canceled && !interrupted()) {
+                    try {
+                        long audioTimestamp = getAudioTimestamp();
+                        DataFrame<BufferedImage> frame = frames.take();
+                        BufferedImage image = frame.data;
+                        synchronized (imageLock) {
+                            currentImage = image;
+                        }
+                        long now = System.nanoTime() / 1000;
+
+                        long delta = frame.timestamp - audioTimestamp;
+                        //if delta > 0, we're ahead of the audio, and need to sleep longer
+                        double targetTime;
+                        if (delta > interframe) {
+                            targetTime = lastFrame + interframe + delta*1.5;
+                            fastVideo.addValue(delta);
+                        } else if (delta < 0) {
+                            slowVideo.addValue(delta);
+                            targetTime = lastFrame + interframe*0.8;
+                        } else {
+                            closeMatch.addValue(delta);
+                            targetTime = lastFrame + interframe;
+                        }
+
+                        if (now < targetTime) {
+                            TimeUnit.MICROSECONDS.sleep((long) (targetTime - now));
+                        }
+                        lastFrame = now;
+                    } catch (InterruptedException ex) {
+                        return;
                     }
-                    index++;
-                    double targetTime = startTime + index * interframe;
-                    long now = System.nanoTime() / 1000;
-                    if (now < targetTime) {
-                        TimeUnit.MICROSECONDS.sleep((long) (targetTime - now));
-                    }
-                } catch (InterruptedException ex) {
-                    return;
                 }
+            } finally {
+                fastVideo.report("Video running fast");
+                slowVideo.report("Video running slow");
+                closeMatch.report("A/V sync");
             }
         }
 
@@ -547,20 +580,41 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
     private class AudioThread extends Thread {
 
         volatile boolean canceled = false;
-        final BlockingQueue<byte[]> samples = new ArrayBlockingQueue<byte[]>(256);
+        final BlockingQueue<DataFrame<byte[]>> samples = new ArrayBlockingQueue<>(256);
+        private final Consumer<Long> timestampListener;
+        private long lastTs = 0;
+
+        AudioThread(Consumer<Long> timestampListener) {
+            this.timestampListener = timestampListener;
+        }
 
         @Override
         public void run() {
             while (!canceled && !interrupted()) {
                 try {
-                    byte[] buffer = samples.take();
+                    DataFrame<byte[]> frame = samples.take();
+                    byte[] buffer = frame.data;
+
                     if (mLine != null) {
                         mLine.write(buffer, 0, buffer.length);
                     }
+                    timestampListener.accept(lastTs);
+                    lastTs = frame.timestamp;
                 } catch (InterruptedException ex) {
                     return;
                 }
             }
+        }
+    }
+
+    private static class DataFrame<T> {
+
+        final T data;
+        final long timestamp;
+
+        DataFrame(T data, long timestamp) {
+            this.data = data;
+            this.timestamp = timestamp;
         }
     }
 }

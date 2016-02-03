@@ -547,6 +547,7 @@ public class FFmpegFrameGrabber {
                     long pts = av_frame_get_best_effort_timestamp(picture);
                     AVRational time_base = video_st.time_base();
                     timestamp = 1000000L * pts * time_base.num() / time_base.den();
+                    frame.timestamp = timestamp;
                     // best guess, AVCodecContext.frame_number = number of decoded frames...
                     frameNumber = (int) (timestamp * getFrameRate() / 1000000L);
                     if (processImage) {
@@ -576,6 +577,7 @@ public class FFmpegFrameGrabber {
                         long pts = av_frame_get_best_effort_timestamp(samples_frame);
                         AVRational time_base = audio_st.time_base();
                         timestamp = 1000000L * pts * time_base.num() / time_base.den();
+                        frame.timestamp = timestamp;
                         /* if a frame has been decoded, output it */
                         done = true;
                         int sample_format = samples_frame.format();
