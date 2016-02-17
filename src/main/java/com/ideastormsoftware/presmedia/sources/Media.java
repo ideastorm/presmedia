@@ -15,21 +15,27 @@
  */
 package com.ideastormsoftware.presmedia.sources;
 
+import com.ideastormsoftware.presmedia.sources.media.FFmpegFrameGrabber;
+import com.ideastormsoftware.presmedia.sources.media.AvException;
+import com.ideastormsoftware.presmedia.sources.media.InterleavedShortConverter;
+import com.ideastormsoftware.presmedia.sources.media.PlanarDblConverter;
+import com.ideastormsoftware.presmedia.sources.media.PlanarFltConverter;
+import com.ideastormsoftware.presmedia.sources.media.InterleavedFltConverter;
+import com.ideastormsoftware.presmedia.sources.media.InterleavedConverter;
+import com.ideastormsoftware.presmedia.sources.media.PlanarConverter;
+import com.ideastormsoftware.presmedia.sources.media.InterleavedDblConverter;
+import com.ideastormsoftware.presmedia.sources.media.PlanarIntConverter;
+import com.ideastormsoftware.presmedia.sources.media.InterleavedIntConverter;
+import com.ideastormsoftware.presmedia.sources.media.AudioConverter;
+import com.ideastormsoftware.presmedia.sources.media.PlanarShortConverter;
 import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.DoubleBuffer;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
-import java.nio.ShortBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
@@ -37,7 +43,6 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import org.bytedeco.javacpp.BytePointer;
-import org.bytedeco.javacpp.ShortPointer;
 import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_DBL;
 import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_DBLP;
 import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_FLT;
@@ -51,21 +56,31 @@ import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_U8;
 import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_U8P;
 import static org.bytedeco.javacpp.avutil.av_get_sample_fmt_name;
 
-public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable {
+public class Media implements ImageSource, CleanCloseable, Startable, Pauseable {
 
     private SourceDataLine mLine;
     private AudioConverter converter;
     private AudioFormat audioFormat;
     private final Runnable callback;
+    private volatile boolean paused = false;
+    private volatile boolean postSeekBuffer = false;
+    private volatile int minimumSamples = 0;
+    private volatile int minimumFrames = 0;
+    private final BlockingQueue<DataFrame<byte[]>> samples = new ArrayBlockingQueue<>(256);
+    private final BlockingQueue<DataFrame<BufferedImage>> frames = new ArrayBlockingQueue<>(256);
+    private FFmpegFrameGrabber ffmpeg;
 
     private final String sourceFile;
     private final Object imageLock = new Object();
     private BufferedImage currentImage = new BufferedImage(1, 1, BufferedImage.TYPE_3BYTE_BGR);
+    private Stats fpsStats = new Stats();
 
     private static void log(String format, Object... params) {
         System.out.println(String.format("%d %s - %s", System.currentTimeMillis(),
                 Thread.currentThread().getName(), String.format(format, params)));
     }
+    private long mediaPosition;
+    private long mediaDuration;
 
     public Media(String sourceFile, Runnable callback) {
         this.sourceFile = sourceFile;
@@ -91,6 +106,50 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
         synchronized (imageLock) {
             return currentImage;
         }
+    }
+
+    @Override
+    public void setPaused(boolean paused) {
+        this.paused = paused;
+    }
+
+    public void togglePaused() {
+        paused = !paused;
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    public void seekTo(long position) throws AvException {
+        if (position >= mediaDuration) {
+            return;
+        }
+        boolean pauseState = paused;
+        setPaused(true);
+        ffmpeg.setTimestamp(position);
+        frames.clear();
+        samples.clear();
+        postSeekBuffer = true;
+        do {
+            delay(2);
+        } while (frames.size() < minimumFrames && samples.size() < minimumSamples);
+        updatePausedImage();
+        setMediaPosition(position);
+        setPaused(pauseState);
+        postSeekBuffer = false;
+    }
+
+    public long getMediaDuration() {
+        return mediaDuration;
+    }
+
+    public int getAudioBufferLoad() {
+        return samples.size() * 100 / 256;
+    }
+
+    public int getVideoBufferLoad() {
+        return frames.size() * 100 / 256;
     }
 
     private void openJavaSound(int sampleFormat, int audioChannels, float sampleRate) throws FileNotFoundException {
@@ -121,7 +180,7 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
                 break;
             case AV_SAMPLE_FMT_S16P:
                 bitsPerSample = 16;
-                converter = new PlanarConverter(bitsPerSample, audioChannels);
+                converter = new PlanarShortConverter(audioChannels);
                 signed = true;
                 break;
             case AV_SAMPLE_FMT_S32P:
@@ -208,6 +267,26 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
         return new String(bytes);
     }
 
+    private void delay(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ex) {
+        }
+    }
+
+    @Override
+    public double getFps() {
+        return fpsStats.getRate();
+    }
+
+    public long getMediaPosition() {
+        return mediaPosition;
+    }
+
+    private void setMediaPosition(long position) {
+        mediaPosition = position;
+    }
+
     private class GrabberThread extends Thread {
 
         private volatile boolean canceled = false;
@@ -217,7 +296,7 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
             log("Media processing thread initialized");
             boolean normalExit = false;
             VideoThread videoThread = new VideoThread();
-            AudioThread audioThread = new AudioThread(videoThread::setAudioTimestamp);
+            AudioThread audioThread = new AudioThread();
             Stats audioStats = new Stats();
             Stats videoStats = new Stats();
             Stats audioBuffer = new Stats();
@@ -226,57 +305,60 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
             Stats videoProcessing = new Stats();
             try {
                 try {
-                    FFmpegFrameGrabber ffmpeg = FFmpegFrameGrabber.createDefault(getSourceFile());
+                    ffmpeg = FFmpegFrameGrabber.createDefault(getSourceFile());
                     try {
                         ffmpeg.start();
                         openJavaSound(ffmpeg.getSampleFormat(), ffmpeg.getAudioChannels(), ffmpeg.getSampleRate());
                         log("sound system initialized");
                         videoThread.setFrameRate(ffmpeg.getFrameRate());
+                        mediaDuration = ffmpeg.getLengthInTime();
                         boolean started = false;
-                        boolean gotAudio = ffmpeg.getAudioBitrate() == 0; //bitrate = 0 means no audio, so don't wait
-                        boolean gotVideo = ffmpeg.getVideoBitrate() == 0; //same for video
+                        minimumFrames = ffmpeg.getVideoBitrate() < 0 ? 0 : 1;
+                        minimumSamples = ffmpeg.getAudioBitrate() < 0 ? 0 : 1;
                         while (!canceled && !interrupted()) {
-                            try {
-                                long start = System.nanoTime();
-                                Frame frame = ffmpeg.grabFrame();
-                                long captureTime = System.nanoTime() - start;
-                                if (frame != null) {
-                                    audioBuffer.addValue(audioThread.samples.size());
-                                    videoBuffer.addValue(videoThread.frames.size());
-                                    if (frame.samples != null) {
-                                        audioStats.addValue(captureTime);
-                                        audioThread.samples.put(new DataFrame(converter.prepareSamplesForPlayback(frame.samples), frame.timestamp));
-                                        audioProcessing.addValue(System.nanoTime() - start);
-                                        gotAudio = true;
+                            if (paused && !postSeekBuffer) {
+                                delay(2);
+                            } else {
+                                try {
+                                    long start = System.nanoTime();
+                                    Frame frame = ffmpeg.grabFrame();
+                                    long captureTime = System.nanoTime() - start;
+                                    if (frame != null) {
+                                        audioBuffer.addValue(samples.size());
+                                        videoBuffer.addValue(frames.size());
+                                        if (frame.samples != null) {
+                                            audioStats.addValue(captureTime);
+                                            samples.put(new DataFrame(converter.prepareSamplesForPlayback(frame.samples), frame.timestamp));
+                                            audioProcessing.addValue(System.nanoTime() - start);
+                                        }
+                                        if (frame.image != null) {
+                                            videoStats.addValue(captureTime);
+                                            frames.put(new DataFrame(ImageUtils.copy(frame.image), frame.timestamp));
+                                            videoProcessing.addValue(System.nanoTime() - start);
+                                        }
+                                    } else {
+                                        normalExit = true;
+                                        break;
                                     }
-                                    if (frame.image != null) {
-                                        videoStats.addValue(captureTime);
-                                        videoThread.frames.put(new DataFrame(ImageUtils.copy(frame.image), frame.timestamp));
-                                        videoProcessing.addValue(System.nanoTime() - start);
-                                        gotVideo = true;
+                                    if (frames.size() >= minimumFrames && samples.size() >= minimumSamples && !started) {
+                                        audioThread.start();
+                                        videoThread.start();
+                                        started = true;
                                     }
-                                } else {
-                                    normalExit = true;
-                                    break;
-                                }
-                                if (gotAudio && gotVideo && !started) {
-                                    audioThread.start();
-                                    videoThread.start();
-                                    started = true;
-                                }
-                            } catch (InterruptedException ex) {
-                                log("got interrupted");
-                                return;
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                synchronized (imageLock) {
-                                    currentImage = ImageUtils.emptyImage();
+                                } catch (InterruptedException ex) {
+                                    log("got interrupted");
+                                    return;
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                    synchronized (imageLock) {
+                                        currentImage = ImageUtils.emptyImage();
+                                    }
                                 }
                             }
                         }
                         if (normalExit) {
                             try {
-                                while (!audioThread.samples.isEmpty() && !videoThread.frames.isEmpty()) {
+                                while (!samples.isEmpty() && !frames.isEmpty()) {
                                     Thread.sleep(5);
                                 }
                             } catch (InterruptedException e) {
@@ -319,250 +401,71 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
         }
     }
 
-    private interface AudioConverter {
-
-        byte[] prepareSamplesForPlayback(Buffer[] samples);
-    }
-
-    private static Buffer convertDblToShortBuffer(DoubleBuffer buffer) {
-        double[] bufferData;
-        if (buffer.hasArray()) {
-            bufferData = buffer.array();
-        } else {
-            bufferData = new double[buffer.limit()];
-            buffer.get(bufferData);
-        }
-        ShortBuffer shortBuffer = ShortBuffer.allocate(bufferData.length);
-        for (double c : bufferData) {
-            shortBuffer.put((short) (c * Short.MAX_VALUE));
-        }
-        shortBuffer.rewind();
-        return new ShortPointer(shortBuffer).asByteBuffer();
-    }
-
-    private static Buffer convertFltToShortBuffer(FloatBuffer buffer) {
-        float[] bufferData;
-        if (buffer.hasArray()) {
-            bufferData = buffer.array();
-        } else {
-            bufferData = new float[buffer.limit()];
-            buffer.get(bufferData);
-        }
-        ShortBuffer shortBuffer = ShortBuffer.allocate(bufferData.length);
-        for (double c : bufferData) {
-            shortBuffer.put((short) (c * Short.MAX_VALUE));
-        }
-        shortBuffer.rewind();
-        return new ShortPointer(shortBuffer).asByteBuffer();
-    }
-
-    private static Buffer convertIntToShortBuffer(IntBuffer buffer) {
-        int[] bufferData;
-        if (buffer.hasArray()) {
-            bufferData = buffer.array();
-        } else {
-            bufferData = new int[buffer.limit()];
-            buffer.get(bufferData);
-        }
-        ShortBuffer shortBuffer = ShortBuffer.allocate(bufferData.length);
-        for (double c : bufferData) {
-            shortBuffer.put((short) (((double) c) / Integer.MAX_VALUE * Short.MAX_VALUE));
-        }
-        shortBuffer.rewind();
-        return new ShortPointer(shortBuffer).asByteBuffer();
-    }
-
-    private static class PlanarFltConverter extends PlanarConverter {
-
-        public PlanarFltConverter(int channels) {
-            super(16, channels);
-        }
-
-        @Override
-        public byte[] prepareSamplesForPlayback(Buffer[] samples) {
-            Buffer[] convertedSamples = new Buffer[samples.length];
-            for (int i = 0; i < samples.length; i++) {
-                convertedSamples[i] = convertFltToShortBuffer((FloatBuffer) samples[i]);
+    private void updatePausedImage() {
+        DataFrame<BufferedImage> frame = frames.peek();
+        if (frame != null) {
+            BufferedImage image = frame.data;
+            synchronized (imageLock) {
+                currentImage = image;
             }
-            return super.prepareSamplesForPlayback(convertedSamples);
-        }
-
-    }
-
-    private static class PlanarDblConverter extends PlanarConverter {
-
-        public PlanarDblConverter(int channels) {
-            super(16, channels);
-        }
-
-        @Override
-        public byte[] prepareSamplesForPlayback(Buffer[] samples) {
-            Buffer[] convertedSamples = new Buffer[samples.length];
-            for (int i = 0; i < samples.length; i++) {
-                convertedSamples[i] = convertDblToShortBuffer((DoubleBuffer) samples[i]);
-            }
-            return super.prepareSamplesForPlayback(convertedSamples);
-        }
-
-    }
-
-    private static class PlanarIntConverter extends PlanarConverter {
-
-        public PlanarIntConverter(int channels) {
-            super(16, channels);
-        }
-
-        @Override
-        public byte[] prepareSamplesForPlayback(Buffer[] samples) {
-            Buffer[] convertedSamples = new Buffer[samples.length];
-            for (int i = 0; i < samples.length; i++) {
-                convertedSamples[i] = convertIntToShortBuffer((IntBuffer) samples[i]);
-            }
-            return super.prepareSamplesForPlayback(convertedSamples);
-        }
-
-    }
-
-    private static class InterleavedDblConverter extends InterleavedConverter {
-
-        @Override
-        public byte[] prepareSamplesForPlayback(Buffer[] samples) {
-            DoubleBuffer buffer = (DoubleBuffer) samples[0];
-            Buffer[] convertedSamples = {convertDblToShortBuffer(buffer)};
-            return super.prepareSamplesForPlayback(convertedSamples);
-        }
-
-    }
-
-    private static class InterleavedFltConverter extends InterleavedConverter {
-
-        @Override
-        public byte[] prepareSamplesForPlayback(Buffer[] samples) {
-            FloatBuffer buffer = (FloatBuffer) samples[0];
-            Buffer[] convertedSamples = {convertFltToShortBuffer(buffer)};
-            return super.prepareSamplesForPlayback(convertedSamples);
-        }
-
-    }
-
-    private static class InterleavedIntConverter extends InterleavedConverter {
-
-        @Override
-        public byte[] prepareSamplesForPlayback(Buffer[] samples) {
-            IntBuffer buffer = (IntBuffer) samples[0];
-            Buffer[] convertedSamples = {convertIntToShortBuffer(buffer)};
-            return super.prepareSamplesForPlayback(convertedSamples);
-        }
-
-    }
-
-    private static class PlanarConverter implements AudioConverter {
-
-        private final int bitSampleSize;
-        private final int channels;
-
-        public PlanarConverter(int bitSampleSize, int channels) {
-            this.bitSampleSize = bitSampleSize;
-            this.channels = channels;
-        }
-
-        @Override
-        public byte[] prepareSamplesForPlayback(Buffer[] samples) {
-
-            int sampleByteSize = (bitSampleSize + 7) / 8;
-            int frameSize = channels * sampleByteSize;
-            int frames = ((ByteBuffer) samples[0]).limit() / sampleByteSize;
-            byte[] buffer = new byte[frames * frameSize];
-            for (int frame = 0; frame < frames; frame++) {
-                int frameOffset = frame * frameSize;
-                for (int channel = 0; channel < channels; channel++) {
-                    int channelOffset = channel * sampleByteSize;
-                    ((ByteBuffer) samples[channel]).get(buffer, frameOffset + channelOffset, sampleByteSize);
-                }
-            }
-            return buffer;
-        }
-    }
-
-    private static class InterleavedShortConverter extends InterleavedConverter {
-
-        @Override
-        public byte[] prepareSamplesForPlayback(Buffer[] samples) {
-            ShortPointer ptr = new ShortPointer((ShortBuffer) samples[0]);
-            samples[0] = ptr.asByteBuffer();
-            return super.prepareSamplesForPlayback(samples);
-        }
-
-    }
-
-    private static class InterleavedConverter implements AudioConverter {
-
-        @Override
-        public byte[] prepareSamplesForPlayback(Buffer[] samples) {
-            ByteBuffer buffer = (ByteBuffer) samples[0];
-            byte[] bufferData;
-            if (buffer.hasArray()) {
-                bufferData = buffer.array();
-            } else {
-                bufferData = new byte[buffer.limit()];
-                buffer.get(bufferData);
-            }
-            return bufferData;
         }
     }
 
     private class VideoThread extends Thread {
 
         volatile boolean canceled = false;
-        private final BlockingQueue<DataFrame<BufferedImage>> frames = new ArrayBlockingQueue<>(256);
-        private double interframe = 1_000_000.0 / 29.97; //target microseconds per frame
-        private long currentAudioTimestamp;
+        private double interframe = 1_000_000.0 / 29.97; //target microseconds per frame, updated with setFrameRate
         private final Stats closeMatch = new Stats();
         private final Stats fastVideo = new Stats();
         private final Stats slowVideo = new Stats();
-
-        synchronized void setAudioTimestamp(long timestamp) {
-            currentAudioTimestamp = timestamp;
-        }
-
-        synchronized long getAudioTimestamp() {
-            return currentAudioTimestamp;
-        }
 
         @Override
         public void run() {
             long lastFrame = System.nanoTime() / 1000;
             try {
                 while (!canceled && !interrupted()) {
-                    try {
-                        long audioTimestamp = getAudioTimestamp();
-                        DataFrame<BufferedImage> frame = frames.take();
-                        BufferedImage image = frame.data;
-                        synchronized (imageLock) {
-                            currentImage = image;
-                        }
-                        long now = System.nanoTime() / 1000;
+                    if (paused) {
+                        delay(2);
+                        lastFrame = System.nanoTime() / 1000;
+                    } else {
+                        try {
+                            DataFrame<BufferedImage> frame = frames.take();
+                            BufferedImage image = frame.data;
+                            synchronized (imageLock) {
+                                currentImage = image;
+                            }
+                            long now = System.nanoTime() / 1000;
+                            long mediaPosition = getMediaPosition();
 
-                        long delta = frame.timestamp - audioTimestamp;
-                        //if delta > 0, we're ahead of the audio, and need to sleep longer
-                        double targetTime;
-                        if (delta > interframe) {
-                            targetTime = lastFrame + interframe + delta*1.5;
-                            fastVideo.addValue(delta);
-                        } else if (delta < 0) {
-                            slowVideo.addValue(delta);
-                            targetTime = lastFrame + interframe*0.8;
-                        } else {
-                            closeMatch.addValue(delta);
-                            targetTime = lastFrame + interframe;
-                        }
+                            double targetTime = lastFrame + interframe;
+                            //if delta > 0, we're ahead of the audio, and need to sleep longer
+                            long delta = frame.timestamp - mediaPosition;
+                            if (minimumSamples > 0) {
+                                if (delta > interframe) {
+                                    targetTime = lastFrame + interframe + delta * 1.5;
+                                    fastVideo.addValue(delta);
+                                } else if (delta < 0) {
+                                    slowVideo.addValue(delta);
+                                    targetTime = lastFrame + interframe * 0.8;
+                                } else {
+                                    closeMatch.addValue(delta);
+                                    targetTime = lastFrame + interframe;
+                                }
+                            } else {
+                                setMediaPosition(frame.timestamp);
+                            }
 
-                        if (now < targetTime) {
-                            TimeUnit.MICROSECONDS.sleep((long) (targetTime - now));
+                            if (now < targetTime) {
+                                long delay = (long) (targetTime - now);
+                                fpsStats.addValue(delay);
+                                TimeUnit.MICROSECONDS.sleep(delay);
+                            } else {
+                                fpsStats.addValue(0);
+                            }
+                            lastFrame = now;
+                        } catch (InterruptedException ex) {
+                            return;
                         }
-                        lastFrame = now;
-                    } catch (InterruptedException ex) {
-                        return;
                     }
                 }
             } finally {
@@ -580,28 +483,26 @@ public class Media implements Supplier<BufferedImage>, CleanCloseable, Startable
     private class AudioThread extends Thread {
 
         volatile boolean canceled = false;
-        final BlockingQueue<DataFrame<byte[]>> samples = new ArrayBlockingQueue<>(256);
-        private final Consumer<Long> timestampListener;
         private long lastTs = 0;
-
-        AudioThread(Consumer<Long> timestampListener) {
-            this.timestampListener = timestampListener;
-        }
 
         @Override
         public void run() {
             while (!canceled && !interrupted()) {
-                try {
-                    DataFrame<byte[]> frame = samples.take();
-                    byte[] buffer = frame.data;
+                if (paused) {
+                    delay(2);
+                } else {
+                    try {
+                        DataFrame<byte[]> frame = samples.take();
+                        byte[] buffer = frame.data;
 
-                    if (mLine != null) {
-                        mLine.write(buffer, 0, buffer.length);
+                        if (mLine != null) {
+                            mLine.write(buffer, 0, buffer.length);
+                        }
+                        setMediaPosition(lastTs);
+                        lastTs = frame.timestamp;
+                    } catch (InterruptedException ex) {
+                        return;
                     }
-                    timestampListener.accept(lastTs);
-                    lastTs = frame.timestamp;
-                } catch (InterruptedException ex) {
-                    return;
                 }
             }
         }

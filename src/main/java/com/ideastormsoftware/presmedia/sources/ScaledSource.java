@@ -36,7 +36,6 @@ public class ScaledSource implements Supplier<BufferedImage>, Runnable {
     private long lastGet = System.currentTimeMillis();
     private final Object syncPoint = new Object();
     private Thread workerThread = null;
-    
 
     public ScaledSource() {
 
@@ -72,7 +71,7 @@ public class ScaledSource implements Supplier<BufferedImage>, Runnable {
     }
 
     private void log(String format, Object... params) {
-        System.out.printf(format + "\n", params);
+        System.out.printf(String.format("%s: ", Thread.currentThread().getName())+format + "\n", params);
     }
 
     @Override

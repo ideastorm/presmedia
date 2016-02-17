@@ -26,8 +26,12 @@ import java.util.function.Supplier;
 import org.imgscalr.Scalr;
 
 public final class ImageUtils {
-    
-    private static final Scalr.Method method = Scalr.Method.valueOf(System.getProperty("scalr.method", "BALANCED"));
+
+    private static Scalr.Method method = Scalr.Method.BALANCED; //.Method.valueOf(System.getProperty("scalr.method", "BALANCED"));
+
+    public static void setScalingMethod(Scalr.Method newMethod) {
+        method = newMethod;
+    }
 
     public static BufferedImage copy(BufferedImage img) {
         BufferedImage copy = new BufferedImage(img.getWidth(), img.getHeight(), img.getType());
@@ -86,6 +90,9 @@ public final class ImageUtils {
         if (img == null) {
             return emptyImage(size);
         }
+        if (size.width < 1 || size.height < 1) {
+            return emptyImage();
+        }
         return Scalr.resize(img, method, size.width, size.height);
     }
 
@@ -101,7 +108,7 @@ public final class ImageUtils {
         Point offset = new Point((width - (int) scaledSize.width) / 2, (height - (int) scaledSize.height) / 2);
         g.drawImage(img, offset.x, offset.y, (int) scaledSize.width, (int) scaledSize.height, null);
     }
-    
+
     public static ScaledSource scaleSource(Supplier<BufferedImage> source) {
         return new ScaledSource().setSource(source);
     }

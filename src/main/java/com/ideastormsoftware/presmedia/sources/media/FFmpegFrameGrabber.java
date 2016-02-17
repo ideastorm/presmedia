@@ -44,8 +44,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package com.ideastormsoftware.presmedia.sources;
+package com.ideastormsoftware.presmedia.sources.media;
 
+import com.ideastormsoftware.presmedia.sources.Frame;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.nio.Buffer;
@@ -60,7 +61,6 @@ import static org.bytedeco.javacpp.avcodec.*;
 import static org.bytedeco.javacpp.avdevice.*;
 import static org.bytedeco.javacpp.avformat.*;
 import static org.bytedeco.javacpp.avutil.*;
-import static org.bytedeco.javacpp.opencv_core.*;
 import static org.bytedeco.javacpp.swscale.*;
 
 /**
@@ -276,7 +276,7 @@ public class FFmpegFrameGrabber {
         setTimestamp(Math.round(1000000L * frameNumber / getFrameRate()));
     }
 
-    public void setTimestamp(long timestamp) throws Exception {
+    public void setTimestamp(long timestamp) throws AvException {
         int ret;
         if (oc != null) {
             timestamp = timestamp * AV_TIME_BASE / 1000000L;
@@ -285,7 +285,7 @@ public class FFmpegFrameGrabber {
                 timestamp += oc.start_time();
             }
             if ((ret = avformat_seek_file(oc, -1, Long.MIN_VALUE, timestamp, Long.MAX_VALUE, AVSEEK_FLAG_BACKWARD)) < 0) {
-                throw new Exception("avformat_seek_file() error " + ret + ": Could not seek file to timestamp " + timestamp + ".");
+                throw new AvException("avformat_seek_file() error " + ret + ": Could not seek file to timestamp " + timestamp + ".");
             }
             if (video_c != null) {
                 avcodec_flush_buffers(video_c);
@@ -468,13 +468,13 @@ public class FFmpegFrameGrabber {
         return img;
     }
 
-    private BufferedImage processImage() throws Exception {
+    private BufferedImage processImage() throws AvException {
         img_convert_ctx = sws_getCachedContext(img_convert_ctx,
                 video_c.width(), video_c.height(), video_c.pix_fmt(),
                 video_c.width(), video_c.height(), getPixelFormat(), SWS_FAST_BILINEAR,
                 null, null, (DoublePointer) null);
         if (img_convert_ctx == null) {
-            throw new Exception("sws_getCachedContext() error: Cannot initialize the conversion context.");
+            throw new AvException("sws_getCachedContext() error: Cannot initialize the conversion context.");
         }
 
         // Convert the image from its native format to RGB or GRAY
@@ -484,26 +484,26 @@ public class FFmpegFrameGrabber {
         return convertFrame(picture_rgb, video_c.width(), video_c.height());
     }
 
-    public BufferedImage grab() throws Exception {
+    public BufferedImage grab() throws AvException {
         Frame f = grabFrame(true, false, false);
         return f != null ? f.image : null;
     }
 
-    public Frame grabFrame() throws Exception {
+    public Frame grabFrame() throws AvException {
         return grabFrame(true, true, false);
     }
 
-    public Frame grabFrame(boolean processImage) throws Exception {
+    public Frame grabFrame(boolean processImage) throws AvException {
         return grabFrame(processImage, true, false);
     }
 
-    public Frame grabKeyFrame() throws Exception {
+    public Frame grabKeyFrame() throws AvException {
         return grabFrame(true, false, true);
     }
 
-    private Frame grabFrame(boolean processImage, boolean doAudio, boolean keyFrames) throws Exception {
+    private Frame grabFrame(boolean processImage, boolean doAudio, boolean keyFrames) throws AvException {
         if (oc == null || oc.isNull()) {
-            throw new Exception("Could not grab: No AVFormatContext. (Has start() been called?)");
+            throw new AvException("Could not grab: No AVFormatContext. (Has start() been called?)");
         }
         Frame frame = new Frame();
         frame.keyFrame = false;

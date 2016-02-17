@@ -8,17 +8,23 @@ import com.ideastormsoftware.presmedia.filters.Lyrics;
 import com.ideastormsoftware.presmedia.filters.Name;
 import com.ideastormsoftware.presmedia.filters.Slideshow;
 import com.ideastormsoftware.presmedia.sources.Camera;
+import com.ideastormsoftware.presmedia.sources.ImageSource;
 import com.ideastormsoftware.presmedia.sources.Media;
+import com.ideastormsoftware.presmedia.sources.media.AvException;
 import com.ideastormsoftware.presmedia.util.DisplayFile;
 import java.awt.Color;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -26,6 +32,7 @@ import javax.swing.border.LineBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.FrameGrabber;
+import org.imgscalr.Scalr;
 
 public class ControlView extends javax.swing.JFrame {
 
@@ -49,6 +56,23 @@ public class ControlView extends javax.swing.JFrame {
     private Lyrics selectedLyrics;
     private Lyrics activeLyrics;
     private Slideshow selectedSlides;
+    private Media activeMedia = null;
+    private final ImageSource mediaSource = new ImageSource() {
+
+        @Override
+        public double getFps() {
+            if (activeMedia != null)
+                return activeMedia.getFps();
+            return 0;
+        }
+
+        @Override
+        public BufferedImage get() {
+            if (activeMedia != null)
+                return activeMedia.get();
+            return ImageUtils.emptyImage();
+        }
+    };
 
     /**
      * Creates new form ControlView
@@ -57,7 +81,20 @@ public class ControlView extends javax.swing.JFrame {
         initComponents();
         source = new CrossFadeProxySource().setSourceNoFade(new ColorSource());
         projector = new Projector(source);
-        projector.setFrameCallback((fps)->projectorFps.setText(String.format("Projector FPS: %01.1f",fps)));
+        projector.setFrameCallback((fps) -> {
+            projectorFps.setText(String.format("Projector FPS: %01.1f", fps));
+            crossfadeFps.setText(String.format("Crossfade FPS: %01.1f", source.getFps()));
+            if (activeMedia != null) {
+                double progress = activeMedia.getMediaPosition()*1000.0/activeMedia.getMediaDuration();
+                mediaProgress.setValue((int) progress);
+                audioBufferFill.setValue(activeMedia.getAudioBufferLoad());
+                videoBufferFill.setValue(activeMedia.getVideoBufferLoad());
+            } else {
+                mediaProgress.setValue(0);
+                audioBufferFill.setValue(0);
+                videoBufferFill.setValue(0);
+            }
+        });
         projector.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
@@ -66,6 +103,9 @@ public class ControlView extends javax.swing.JFrame {
         });
         RenderPane controlPreview = new RenderPane(source);
         outputContainer.add(controlPreview);
+        RenderPane mediaPreview = new RenderPane(mediaSource);
+        mediaPreviewContainer.add(mediaPreview);
+        mediaPreview.setSize(201,134);
         mediaListModel = new DefaultListModel<>();
         mediaList.setModel(mediaListModel);
         lyricsListModel = new DefaultListModel<>();
@@ -96,7 +136,6 @@ public class ControlView extends javax.swing.JFrame {
     private void initComponents() {
 
         outputContainer = new javax.swing.JPanel();
-        jLabel2 = new javax.swing.JLabel();
         jPanel1 = new javax.swing.JPanel();
         jScrollPane4 = new javax.swing.JScrollPane();
         mediaList = new javax.swing.JList();
@@ -137,13 +176,27 @@ public class ControlView extends javax.swing.JFrame {
         loadSettings = new javax.swing.JButton();
         loopMedia = new javax.swing.JCheckBox();
         deinterlaceCamera = new javax.swing.JCheckBox();
+        jPanel3 = new javax.swing.JPanel();
+        crossfadeFps = new javax.swing.JLabel();
+        jLabel8 = new javax.swing.JLabel();
+        scalingMethodPicker = new javax.swing.JComboBox();
         projectorFps = new javax.swing.JLabel();
+        jLabel9 = new javax.swing.JLabel();
+        audioBufferFill = new javax.swing.JProgressBar();
+        jLabel10 = new javax.swing.JLabel();
+        videoBufferFill = new javax.swing.JProgressBar();
+        jLabel2 = new javax.swing.JLabel();
+        jPanel4 = new javax.swing.JPanel();
+        mediaPreviewContainer = new javax.swing.JPanel();
+        mediaProgress = new javax.swing.JProgressBar();
+        seekRev = new javax.swing.JButton();
+        togglePause = new javax.swing.JButton();
+        seekFwd = new javax.swing.JButton();
 
         setTitle("Presmedia Control");
+        setMinimumSize(new java.awt.Dimension(924, 633));
 
         outputContainer.setLayout(new javax.swing.BoxLayout(outputContainer, javax.swing.BoxLayout.LINE_AXIS));
-
-        jLabel2.setText("Output Preview");
 
         jPanel1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(153, 153, 153)));
 
@@ -453,7 +506,140 @@ public class ControlView extends javax.swing.JFrame {
 
         deinterlaceCamera.setText("Deinterlace Video");
 
+        crossfadeFps.setText("Crossfade Proxy FPS");
+
+        jLabel8.setText("Image Scaling Method");
+
+        scalingMethodPicker.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "SPEED", "BALANCED", "AUTOMATIC", "QUALITY", "ULTRA_QUALITY" }));
+        scalingMethodPicker.setSelectedItem("BALANCED");
+        scalingMethodPicker.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                scalingMethodPickerActionPerformed(evt);
+            }
+        });
+
         projectorFps.setText("Projector FPS: 30.0");
+
+        jLabel9.setText("Media Audio Buffer");
+
+        jLabel10.setText("Media Video Buffer");
+
+        javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
+        jPanel3.setLayout(jPanel3Layout);
+        jPanel3Layout.setHorizontalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel3Layout.createSequentialGroup()
+                        .addComponent(jLabel8)
+                        .addGap(18, 18, 18)
+                        .addComponent(scalingMethodPicker, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(projectorFps, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jPanel3Layout.createSequentialGroup()
+                        .addComponent(jLabel10)
+                        .addGap(29, 29, 29)
+                        .addComponent(videoBufferFill, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addGroup(jPanel3Layout.createSequentialGroup()
+                        .addComponent(crossfadeFps)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(jPanel3Layout.createSequentialGroup()
+                        .addComponent(jLabel9)
+                        .addGap(28, 28, 28)
+                        .addComponent(audioBufferFill, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                .addContainerGap())
+        );
+        jPanel3Layout.setVerticalGroup(
+            jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel3Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel8)
+                    .addComponent(scalingMethodPicker, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(crossfadeFps)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(projectorFps)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel9)
+                    .addComponent(audioBufferFill, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel10)
+                    .addComponent(videoBufferFill, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(196, Short.MAX_VALUE))
+        );
+
+        jLabel2.setText("Output Preview");
+
+        mediaPreviewContainer.setPreferredSize(new java.awt.Dimension(0, 0));
+
+        javax.swing.GroupLayout mediaPreviewContainerLayout = new javax.swing.GroupLayout(mediaPreviewContainer);
+        mediaPreviewContainer.setLayout(mediaPreviewContainerLayout);
+        mediaPreviewContainerLayout.setHorizontalGroup(
+            mediaPreviewContainerLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 201, Short.MAX_VALUE)
+        );
+        mediaPreviewContainerLayout.setVerticalGroup(
+            mediaPreviewContainerLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 134, Short.MAX_VALUE)
+        );
+
+        mediaProgress.setMaximum(1000);
+        mediaProgress.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                mediaProgressMouseClicked(evt);
+            }
+        });
+
+        seekRev.setText("<<");
+        seekRev.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                seekRevActionPerformed(evt);
+            }
+        });
+
+        togglePause.setText("| |");
+        togglePause.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                togglePauseActionPerformed(evt);
+            }
+        });
+
+        seekFwd.setText(">>");
+        seekFwd.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                seekFwdActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
+        jPanel4.setLayout(jPanel4Layout);
+        jPanel4Layout.setHorizontalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel4Layout.createSequentialGroup()
+                .addComponent(seekRev)
+                .addGap(28, 28, 28)
+                .addComponent(togglePause, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGap(28, 28, 28)
+                .addComponent(seekFwd))
+            .addComponent(mediaProgress, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addComponent(mediaPreviewContainer, javax.swing.GroupLayout.PREFERRED_SIZE, 201, javax.swing.GroupLayout.PREFERRED_SIZE)
+        );
+        jPanel4Layout.setVerticalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
+                .addComponent(mediaPreviewContainer, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(mediaProgress, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(seekRev, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(seekFwd)
+                        .addComponent(togglePause))))
+        );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -472,71 +658,77 @@ public class ControlView extends javax.swing.JFrame {
                     .addComponent(deinterlaceCamera))
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addGroup(layout.createSequentialGroup()
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addComponent(jPanel1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(jLabel3, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(displayMedia, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                    .addGroup(layout.createSequentialGroup()
                         .addGap(10, 10, 10)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(loopMedia, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addGroup(layout.createSequentialGroup()
                                 .addComponent(addMedia, javax.swing.GroupLayout.PREFERRED_SIZE, 79, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                .addComponent(removeMedia, javax.swing.GroupLayout.PREFERRED_SIZE, 75, javax.swing.GroupLayout.PREFERRED_SIZE)))))
+                                .addComponent(removeMedia, javax.swing.GroupLayout.PREFERRED_SIZE, 75, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                    .addGroup(layout.createSequentialGroup()
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                            .addComponent(jPanel1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jLabel3, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(displayMedia, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel4))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(outputContainer, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addComponent(saveSettings)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(loadSettings))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jLabel2)
                         .addGap(0, 0, Short.MAX_VALUE))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addGap(0, 84, Short.MAX_VALUE)
-                        .addComponent(saveSettings)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(projectorFps, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(loadSettings, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                    .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel1)
-                    .addComponent(jLabel3)
-                    .addComponent(jLabel4)
-                    .addComponent(jLabel2))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(jScrollPane3))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addContainerGap()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(loopMedia)
-                            .addComponent(deinterlaceCamera))
+                            .addComponent(jLabel1)
+                            .addComponent(jLabel3)
+                            .addComponent(jLabel4))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(configureCameras)
-                            .addComponent(addMedia)
-                            .addComponent(removeMedia))
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addGroup(layout.createSequentialGroup()
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(jScrollPane3)
+                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                        .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addGap(8, 8, 8)
+                                        .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                    .addComponent(loopMedia)
+                                    .addComponent(deinterlaceCamera))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                    .addComponent(configureCameras)
+                                    .addComponent(addMedia)
+                                    .addComponent(removeMedia))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                    .addComponent(displayCamera)
+                                    .addComponent(displayMedia)))
+                            .addComponent(jPanel2, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(jLabel2)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(displayCamera)
-                            .addComponent(displayMedia)))
-                    .addComponent(jPanel2, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
-                        .addComponent(outputContainer, javax.swing.GroupLayout.PREFERRED_SIZE, 526, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(projectorFps)
+                        .addComponent(outputContainer, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(loadSettings)
@@ -544,7 +736,8 @@ public class ControlView extends javax.swing.JFrame {
                 .addContainerGap())
         );
 
-        setBounds(0, 0, 967, 670);
+        setSize(new java.awt.Dimension(940, 670));
+        setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
     private void configureCamerasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_configureCamerasActionPerformed
@@ -563,7 +756,7 @@ public class ControlView extends javax.swing.JFrame {
         int index = 0;
         for (Integer cameraIndex : cameras) {
             final Camera camera = Camera.getCamera(cameraIndex);
-            final RenderPane preview = new RenderPane(ImageUtils.scaleSource(camera),camera::getFps);
+            final RenderPane preview = new RenderPane(ImageUtils.scaleSource(camera), camera::getFps);
             preview.setBorder(new LineBorder(Color.black, 2));
             preview.addMouseListener(new MouseAdapter() {
                 @Override
@@ -755,6 +948,68 @@ public class ControlView extends javax.swing.JFrame {
         source.setOverlay(null);
     }//GEN-LAST:event_displayNameActionPerformed
 
+    private void scalingMethodPickerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_scalingMethodPickerActionPerformed
+        try {
+            Scalr.Method scalingMethod = Scalr.Method.valueOf(scalingMethodPicker.getSelectedItem().toString());
+            ImageUtils.setScalingMethod(scalingMethod);
+        } catch (IllegalArgumentException e) {
+            warn(scalingMethodPicker.getSelectedItem().toString() + " is not a valid scalr method", e);
+        }
+    }//GEN-LAST:event_scalingMethodPickerActionPerformed
+
+    private void mediaProgressMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_mediaProgressMouseClicked
+        if (activeMedia != null) {
+            try {
+                double percent = evt.getX() * 1.0 / mediaProgress.getWidth();
+                long target = (long) (activeMedia.getMediaDuration() * percent);
+                activeMedia.seekTo(target);
+            } catch (AvException ex) {
+                warn("Unable to seek within media", ex);
+            }
+        }
+    }//GEN-LAST:event_mediaProgressMouseClicked
+
+    private void togglePauseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_togglePauseActionPerformed
+        if (activeMedia != null) {
+            activeMedia.togglePaused();
+            if (activeMedia.isPaused()) {
+                togglePause.setText(">");
+            } else {
+                togglePause.setText("| |");
+            }
+        }
+    }//GEN-LAST:event_togglePauseActionPerformed
+
+    private void seekRevActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_seekRevActionPerformed
+        if (activeMedia != null) {
+            try {
+                long current = activeMedia.getMediaPosition();
+                long target = current - TimeUnit.SECONDS.toMicros(5);
+                if (target < 0) {
+                    target = 0;
+                }
+                activeMedia.seekTo(target);
+            } catch (AvException ex) {
+                warn("Unable to seek within media", ex);
+            }
+        }
+    }//GEN-LAST:event_seekRevActionPerformed
+
+    private void seekFwdActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_seekFwdActionPerformed
+        if (activeMedia != null) {
+            try {
+                long current = activeMedia.getMediaPosition();
+                long target = current + TimeUnit.SECONDS.toMicros(5);
+                if (target > activeMedia.getMediaDuration()) {
+                    target = activeMedia.getMediaDuration();
+                }
+                activeMedia.seekTo(target);
+            } catch (AvException ex) {
+                warn("Unable to seek within media", ex);
+            }
+        }
+    }//GEN-LAST:event_seekFwdActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -798,7 +1053,9 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JButton addSlideshow;
     private javax.swing.JButton addSong;
     private javax.swing.JButton advanceLyrics;
+    private javax.swing.JProgressBar audioBufferFill;
     private javax.swing.JButton configureCameras;
+    private javax.swing.JLabel crossfadeFps;
     private javax.swing.JCheckBox deinterlaceCamera;
     private javax.swing.JToggleButton displayCamera;
     private javax.swing.JToggleButton displayMedia;
@@ -808,14 +1065,19 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JButton editSong;
     private javax.swing.JPanel inputPreviews;
     private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel8;
+    private javax.swing.JLabel jLabel9;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
+    private javax.swing.JPanel jPanel3;
+    private javax.swing.JPanel jPanel4;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
@@ -824,6 +1086,8 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JButton loadSettings;
     private javax.swing.JCheckBox loopMedia;
     private javax.swing.JList mediaList;
+    private javax.swing.JPanel mediaPreviewContainer;
+    private javax.swing.JProgressBar mediaProgress;
     private javax.swing.JList nameList;
     private javax.swing.JPanel outputContainer;
     private javax.swing.JLabel projectorFps;
@@ -832,10 +1096,15 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JButton removeSlideshow;
     private javax.swing.JButton removeSong;
     private javax.swing.JButton saveSettings;
+    private javax.swing.JComboBox scalingMethodPicker;
+    private javax.swing.JButton seekFwd;
+    private javax.swing.JButton seekRev;
     private javax.swing.JToggleButton showLyrics;
     private javax.swing.JToggleButton showSlides;
     private javax.swing.JList slideList;
     private javax.swing.JList songList;
+    private javax.swing.JButton togglePause;
+    private javax.swing.JProgressBar videoBufferFill;
     // End of variables declaration//GEN-END:variables
 
     private void updatePreview() {
@@ -859,24 +1128,30 @@ public class ControlView extends javax.swing.JFrame {
                                     return;
                                 }
                             }
-                            source.setSource(new Media(selectedMedia.get(mediaIndex).getAbsolutePath(), this));
+                            activeMedia = new Media(selectedMedia.get(mediaIndex).getAbsolutePath(), this);
+                            source.setSource(activeMedia);
                         } catch (Exception ex) {
+                            activeMedia = null;
                             ex.printStackTrace();
                             source.setSource(new ColorSource());
                         }
                     }
                 };
                 if (!selectedMedia.isEmpty()) {
-                    source.setSource(new Media(selectedMedia.get(0).getAbsolutePath(), callback));
-                }
-            } else if (displayCamera.isSelected() && selectedCamera != null) {
-                if (deinterlaceCamera.isSelected()) {
-                    source.setSource(new Deinterlace().setSource(selectedCamera));
-                } else {
-                    source.setSource(selectedCamera);
+                    activeMedia = new Media(selectedMedia.get(0).getAbsolutePath(), callback);
+                    source.setSource(activeMedia);
                 }
             } else {
-                source.setSource(new ColorSource());
+                activeMedia = null;
+                if (displayCamera.isSelected() && selectedCamera != null) {
+                    if (deinterlaceCamera.isSelected()) {
+                        source.setSource(new Deinterlace().setSource(selectedCamera));
+                    } else {
+                        source.setSource(selectedCamera);
+                    }
+                } else {
+                    source.setSource(new ColorSource());
+                }
             }
         } catch (Throwable e) {
             e.printStackTrace();
