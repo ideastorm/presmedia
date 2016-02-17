@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ideastormsoftware.presmedia.sources;
+package com.ideastormsoftware.presmedia.util;
 
 import java.util.ArrayDeque;
 import java.util.Queue;

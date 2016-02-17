@@ -15,6 +15,7 @@
  */
 package com.ideastormsoftware.presmedia.sources;
 
+import com.ideastormsoftware.presmedia.util.Stats;
 import de.humatic.dsj.DSCapture;
 import de.humatic.dsj.DSEnvironment;
 import de.humatic.dsj.DSFilterInfo;

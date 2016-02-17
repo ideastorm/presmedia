@@ -15,6 +15,7 @@
  */
 package com.ideastormsoftware.presmedia.sources;
 
+import com.ideastormsoftware.presmedia.util.Stats;
 import com.ideastormsoftware.presmedia.util.ImageUtils;
 import com.ideastormsoftware.presmedia.filters.ImageFilter;
 import java.awt.AlphaComposite;

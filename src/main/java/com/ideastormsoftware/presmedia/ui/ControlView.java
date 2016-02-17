@@ -12,6 +12,7 @@ import com.ideastormsoftware.presmedia.sources.ImageSource;
 import com.ideastormsoftware.presmedia.sources.Media;
 import com.ideastormsoftware.presmedia.sources.media.AvException;
 import com.ideastormsoftware.presmedia.util.DisplayFile;
+import com.ideastormsoftware.presmedia.util.RollingAverage;
 import java.awt.Color;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -23,8 +24,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -32,10 +31,11 @@ import javax.swing.border.LineBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.FrameGrabber;
+import org.hyperic.sigar.Sigar;
 import org.imgscalr.Scalr;
 
 public class ControlView extends javax.swing.JFrame {
-
+    
     static {
         try {
             FFmpegFrameGrabber.tryLoad();
@@ -44,7 +44,7 @@ public class ControlView extends javax.swing.JFrame {
             ex.printStackTrace();
         }
     }
-
+    
     private final CrossFadeProxySource source;
     private final Projector projector;
     private Camera selectedCamera;
@@ -57,19 +57,24 @@ public class ControlView extends javax.swing.JFrame {
     private Lyrics activeLyrics;
     private Slideshow selectedSlides;
     private Media activeMedia = null;
+    private Sigar sigar = new Sigar();
+    private RollingAverage cpuAvg = new RollingAverage(5);
+    private RollingAverage memAvg = new RollingAverage(5);
     private final ImageSource mediaSource = new ImageSource() {
-
+        
         @Override
         public double getFps() {
-            if (activeMedia != null)
+            if (activeMedia != null) {
                 return activeMedia.getFps();
+            }
             return 0;
         }
-
+        
         @Override
         public BufferedImage get() {
-            if (activeMedia != null)
+            if (activeMedia != null) {
                 return activeMedia.get();
+            }
             return ImageUtils.emptyImage();
         }
     };
@@ -85,7 +90,7 @@ public class ControlView extends javax.swing.JFrame {
             projectorFps.setText(String.format("Projector FPS: %01.1f", fps));
             crossfadeFps.setText(String.format("Crossfade FPS: %01.1f", source.getFps()));
             if (activeMedia != null) {
-                double progress = activeMedia.getMediaPosition()*1000.0/activeMedia.getMediaDuration();
+                double progress = activeMedia.getMediaPosition() * 1000.0 / activeMedia.getMediaDuration();
                 mediaProgress.setValue((int) progress);
                 audioBufferFill.setValue(activeMedia.getAudioBufferLoad());
                 videoBufferFill.setValue(activeMedia.getVideoBufferLoad());
@@ -93,6 +98,14 @@ public class ControlView extends javax.swing.JFrame {
                 mediaProgress.setValue(0);
                 audioBufferFill.setValue(0);
                 videoBufferFill.setValue(0);
+            }
+            try {
+                cpuLabel.setText(String.format("CPU: %1.1f%%", cpuAvg.addValue(sigar.getCpuPerc().getCombined() * 100)));
+                cpuGraph.setValue((int) cpuAvg.get());
+                memLabel.setText(String.format("MEM: %1.1f%%", memAvg.addValue(sigar.getMem().getUsedPercent())));
+                memGraph.setValue((int) memAvg.get());
+                
+            } catch (Throwable ex) {
             }
         });
         projector.addComponentListener(new ComponentAdapter() {
@@ -105,7 +118,7 @@ public class ControlView extends javax.swing.JFrame {
         outputContainer.add(controlPreview);
         RenderPane mediaPreview = new RenderPane(mediaSource);
         mediaPreviewContainer.add(mediaPreview);
-        mediaPreview.setSize(201,134);
+        mediaPreview.setSize(201, 134);
         mediaListModel = new DefaultListModel<>();
         mediaList.setModel(mediaListModel);
         lyricsListModel = new DefaultListModel<>();
@@ -115,7 +128,7 @@ public class ControlView extends javax.swing.JFrame {
         nameListModel = new DefaultListModel<>();
         nameList.setModel(nameListModel);
     }
-
+    
     @Override
     public void setVisible(boolean visible) {
         super.setVisible(visible);
@@ -185,6 +198,10 @@ public class ControlView extends javax.swing.JFrame {
         audioBufferFill = new javax.swing.JProgressBar();
         jLabel10 = new javax.swing.JLabel();
         videoBufferFill = new javax.swing.JProgressBar();
+        cpuLabel = new javax.swing.JLabel();
+        cpuGraph = new javax.swing.JProgressBar();
+        memLabel = new javax.swing.JLabel();
+        memGraph = new javax.swing.JProgressBar();
         jLabel2 = new javax.swing.JLabel();
         jPanel4 = new javax.swing.JPanel();
         mediaPreviewContainer = new javax.swing.JPanel();
@@ -524,6 +541,10 @@ public class ControlView extends javax.swing.JFrame {
 
         jLabel10.setText("Media Video Buffer");
 
+        cpuLabel.setText("CPU");
+
+        memLabel.setText("Memory");
+
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(
@@ -537,16 +558,22 @@ public class ControlView extends javax.swing.JFrame {
                         .addComponent(scalingMethodPicker, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                     .addComponent(projectorFps, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(jPanel3Layout.createSequentialGroup()
-                        .addComponent(jLabel10)
-                        .addGap(29, 29, 29)
-                        .addComponent(videoBufferFill, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addComponent(jLabel9)
+                        .addGap(28, 28, 28)
+                        .addComponent(audioBufferFill, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                     .addGroup(jPanel3Layout.createSequentialGroup()
                         .addComponent(crossfadeFps)
                         .addGap(0, 0, Short.MAX_VALUE))
                     .addGroup(jPanel3Layout.createSequentialGroup()
-                        .addComponent(jLabel9)
-                        .addGap(28, 28, 28)
-                        .addComponent(audioBufferFill, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                            .addComponent(memLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(cpuLabel, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jLabel10, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addGap(29, 29, 29)
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(videoBufferFill, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(cpuGraph, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(memGraph, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
                 .addContainerGap())
         );
         jPanel3Layout.setVerticalGroup(
@@ -557,18 +584,27 @@ public class ControlView extends javax.swing.JFrame {
                     .addComponent(jLabel8)
                     .addComponent(scalingMethodPicker, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(crossfadeFps)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(projectorFps)
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(jPanel3Layout.createSequentialGroup()
+                        .addComponent(crossfadeFps)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(projectorFps)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel9)
+                            .addComponent(audioBufferFill, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel10)
+                            .addComponent(videoBufferFill, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(cpuLabel))
+                    .addComponent(cpuGraph, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel9)
-                    .addComponent(audioBufferFill, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel10)
-                    .addComponent(videoBufferFill, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(196, Short.MAX_VALUE))
+                    .addComponent(memLabel)
+                    .addComponent(memGraph, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(156, Short.MAX_VALUE))
         );
 
         jLabel2.setText("Output Preview");
@@ -1042,7 +1078,7 @@ public class ControlView extends javax.swing.JFrame {
             }
         });
     }
-
+    
     private void warn(String message, Throwable exception) {
         JOptionPane.showMessageDialog(rootPane, message + exception.getMessage(), "Warning", JOptionPane.WARNING_MESSAGE);
     }
@@ -1055,6 +1091,8 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JButton advanceLyrics;
     private javax.swing.JProgressBar audioBufferFill;
     private javax.swing.JButton configureCameras;
+    private javax.swing.JProgressBar cpuGraph;
+    private javax.swing.JLabel cpuLabel;
     private javax.swing.JLabel crossfadeFps;
     private javax.swing.JCheckBox deinterlaceCamera;
     private javax.swing.JToggleButton displayCamera;
@@ -1088,6 +1126,8 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JList mediaList;
     private javax.swing.JPanel mediaPreviewContainer;
     private javax.swing.JProgressBar mediaProgress;
+    private javax.swing.JProgressBar memGraph;
+    private javax.swing.JLabel memLabel;
     private javax.swing.JList nameList;
     private javax.swing.JPanel outputContainer;
     private javax.swing.JLabel projectorFps;
@@ -1114,7 +1154,7 @@ public class ControlView extends javax.swing.JFrame {
                 List<File> selectedMedia = mediaList.getSelectedValuesList();
                 Runnable callback = new Runnable() {
                     int mediaIndex = 0;
-
+                    
                     @Override
                     public void run() {
                         try {
@@ -1158,11 +1198,11 @@ public class ControlView extends javax.swing.JFrame {
             source.setSource(new ColorSource());
         }
     }
-
+    
     private void saveSettingsToFile(File selectedFile) {
         new Settings(mediaListModel, lyricsListModel, slideListModel, nameListModel).saveToFile(selectedFile);
     }
-
+    
     private void loadSettingsFromFile(File selectedFile) throws IOException {
         new Settings(mediaListModel, lyricsListModel, slideListModel, nameListModel).loadFromFile(selectedFile);
     }
