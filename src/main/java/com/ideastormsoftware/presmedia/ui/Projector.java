@@ -18,7 +18,7 @@ package com.ideastormsoftware.presmedia.ui;
 import com.ideastormsoftware.presmedia.sources.ScaledSource;
 import java.awt.Dimension;
 import java.awt.DisplayMode;
-import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.HeadlessException;
@@ -41,7 +41,7 @@ public class Projector extends Window {
             if (strategy != null) {
                 do {
                     do {
-                        Graphics graphics = strategy.getDrawGraphics();
+                        Graphics2D graphics = (Graphics2D) strategy.getDrawGraphics();
                         painter.paint(graphics);
                         graphics.dispose();
                     } while (strategy.contentsRestored());

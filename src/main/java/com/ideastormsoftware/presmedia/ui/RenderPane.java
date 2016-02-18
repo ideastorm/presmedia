@@ -20,6 +20,7 @@ import com.ideastormsoftware.presmedia.sources.ScaledSource;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.HeadlessException;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -81,7 +82,7 @@ public class RenderPane extends JPanel {
 
     @Override
     public void paint(Graphics grphcs) {
-        painter.paint(grphcs);
+        painter.paint((Graphics2D) grphcs);
         Border border = getBorder();
         if (border != null) {
             int w = getWidth();

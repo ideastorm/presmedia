@@ -18,9 +18,7 @@ package com.ideastormsoftware.presmedia.ui;
 import com.ideastormsoftware.presmedia.sources.ScaledSource;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Point;
-import java.awt.image.BufferedImage;
+import java.awt.Graphics2D;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.function.Supplier;
@@ -28,8 +26,6 @@ import java.util.function.Supplier;
 public class ImagePainter {
 
     private static double targetFps = 29.97;
-    private final Object imageLock = new Object();
-    private BufferedImage nextImage;
 
     private static void log(String format, Object... params) {
         System.out.printf(format + "\n", params);
@@ -38,6 +34,7 @@ public class ImagePainter {
     private int width;
     private int height;
     private Supplier<Double> fpsSource;
+    private ScaledSource source;
 
     public static void setFrameRate(double targetFps) {
         ImagePainter.targetFps = targetFps;
@@ -59,10 +56,8 @@ public class ImagePainter {
 
     public void setup(ScaledSource source, Supplier<Double> fpsSource, Runnable callback) {
         this.fpsSource = fpsSource;
+        this.source = source;
         this.timer = new LoopingThread(() -> {
-            synchronized (imageLock) {
-                nextImage = source.get();
-            }
             if (callback != null) {
                 callback.run();
             }
@@ -70,20 +65,11 @@ public class ImagePainter {
         timer.start();
     }
 
-    public void paint(Graphics g) {
-        BufferedImage img;
-        synchronized (imageLock) {
-            img = nextImage;
-        }
-
+    public void paint(Graphics2D g) {
         g.setColor(Color.black);
         g.fillRect(0, 0, width, height);
-        if (img != null) {
-            Point offset = new Point((width - img.getWidth()) / 2, (height - img.getHeight()) / 2);
-            g.drawImage(img, offset.x, offset.y, null);
-        }
+        source.scaleInto(g);
         if (fpsSource != null) {
-//        String fps = String.format("FPS: %01.1f Delay: %01.1f %s", timer.getRate(), timer.getLastDelay(), sourceFps);
             String fps = String.format("FPS: %01.1f SRC FPS: %01.1f", timer.getRate(), fpsSource.get());
             g.setColor(Color.black);
             g.drawString(fps, 5, height - 16);

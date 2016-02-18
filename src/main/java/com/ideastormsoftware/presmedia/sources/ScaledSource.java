@@ -18,6 +18,7 @@ package com.ideastormsoftware.presmedia.sources;
 import com.ideastormsoftware.presmedia.ui.ImagePainter;
 import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.Dimension;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -45,7 +46,11 @@ public class ScaledSource implements Supplier<BufferedImage>, Runnable {
         this.source = source;
         return (T) this;
     }
-
+    
+    public void scaleInto(Graphics2D graphics) {
+        ImageUtils.drawAspectScaled(graphics, source.get(), targetSize);
+    }
+    
     @Override
     public BufferedImage get() {
         synchronized (syncPoint) {
