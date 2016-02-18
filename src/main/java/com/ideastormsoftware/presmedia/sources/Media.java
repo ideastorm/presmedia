@@ -29,6 +29,7 @@ import com.ideastormsoftware.presmedia.sources.media.PlanarIntConverter;
 import com.ideastormsoftware.presmedia.sources.media.InterleavedIntConverter;
 import com.ideastormsoftware.presmedia.sources.media.AudioConverter;
 import com.ideastormsoftware.presmedia.sources.media.PlanarShortConverter;
+import com.ideastormsoftware.presmedia.ui.ImagePainter;
 import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
@@ -311,11 +312,13 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                         ffmpeg.start();
                         openJavaSound(ffmpeg.getSampleFormat(), ffmpeg.getAudioChannels(), ffmpeg.getSampleRate());
                         log("sound system initialized");
-                        videoThread.setFrameRate(ffmpeg.getFrameRate());
                         mediaDuration = ffmpeg.getLengthInTime();
                         boolean started = false;
-                        minimumFrames = ffmpeg.getVideoBitrate() < 0 ? 0 : 1;
-                        minimumSamples = ffmpeg.getAudioBitrate() < 0 ? 0 : 1;
+                        minimumFrames = ffmpeg.getVideoBitrate() < 0 ? 0 : 5;
+                        minimumSamples = ffmpeg.getAudioBitrate() < 0 ? 0 : 5;
+                        if (minimumFrames > 0) {
+                            ImagePainter.setFrameRate(ffmpeg.getFrameRate());
+                        }
                         while (!canceled && !interrupted()) {
                             if (paused && !postSeekBuffer) {
                                 delay(2);
@@ -376,6 +379,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                         ffmpeg.release();
                         closeJavaSound();
                         log("processing thread terminated");
+                        ImagePainter.setFrameRate(29.97);
                     }
                 } catch (Throwable ex) {
                     ex.printStackTrace();
@@ -415,7 +419,6 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
     private class VideoThread extends Thread {
 
         volatile boolean canceled = false;
-        private double interframe = 1_000_000.0 / 29.97; //target microseconds per frame, updated with setFrameRate
         private final Stats closeMatch = new Stats();
         private final Stats fastVideo = new Stats();
         private final Stats slowVideo = new Stats();
@@ -425,6 +428,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
             long lastFrame = System.nanoTime() / 1000;
             try {
                 while (!canceled && !interrupted()) {
+                    long interframe = (long) (1_000_000 / ImagePainter.getFrameRate());
                     if (paused) {
                         delay(2);
                         lastFrame = System.nanoTime() / 1000;
@@ -474,10 +478,6 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                 slowVideo.report("Video running slow");
                 closeMatch.report("A/V sync");
             }
-        }
-
-        private void setFrameRate(double frameRate) {
-            this.interframe = 1_000_000 / frameRate;
         }
     }
 

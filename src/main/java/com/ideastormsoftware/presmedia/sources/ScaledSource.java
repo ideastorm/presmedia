@@ -15,6 +15,7 @@
  */
 package com.ideastormsoftware.presmedia.sources;
 
+import com.ideastormsoftware.presmedia.ui.ImagePainter;
 import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
@@ -30,7 +31,6 @@ public class ScaledSource implements Supplier<BufferedImage>, Runnable {
     public Supplier<BufferedImage> source;
     protected Dimension targetSize = new Dimension(1280, 720);
     private BufferedImage scaledImage = ImageUtils.emptyImage();
-    private static final long RUN_DELAY = 1000 / 30;
     private boolean active = true;
     private boolean shutdown = false;
     private long lastGet = System.currentTimeMillis();
@@ -86,7 +86,8 @@ public class ScaledSource implements Supplier<BufferedImage>, Runnable {
                 BufferedImage image = source.get();
                 setScaledImage(ImageUtils.copyAspectScaled(image, targetSize));
             }
-            long delay = RUN_DELAY - (System.currentTimeMillis() - start);
+            long runDelay = (long) (1000 / ImagePainter.getFrameRate());
+            long delay = runDelay - (System.currentTimeMillis() - start);
             if (delay > 0) {
                 delay(delay);
             }

@@ -27,6 +27,7 @@ import java.util.function.Supplier;
 
 public class ImagePainter {
 
+    private static double targetFps = 29.97;
     private final Object imageLock = new Object();
     private BufferedImage nextImage;
 
@@ -38,6 +39,15 @@ public class ImagePainter {
     private int height;
     private Supplier<Double> fpsSource;
 
+    public static void setFrameRate(double targetFps) {
+        ImagePainter.targetFps = targetFps;
+    }
+    
+    public static double getFrameRate()
+    {
+        return ImagePainter.targetFps;
+    }
+    
     ImagePainter(Dimension size) {
         this.width = (int) size.getWidth();
         this.height = (int) size.getHeight();
@@ -49,7 +59,7 @@ public class ImagePainter {
 
     public void setup(ScaledSource source, Supplier<Double> fpsSource, Runnable callback) {
         this.fpsSource = fpsSource;
-        this.timer = new LoopingThread(1000 / 30d, () -> {
+        this.timer = new LoopingThread(() -> {
             synchronized (imageLock) {
                 nextImage = source.get();
             }
@@ -90,13 +100,11 @@ public class ImagePainter {
 
     private static class LoopingThread extends Thread {
 
-        private final double minimumDelayMillis;
         private final Runnable task;
         private Queue<Long> startTimes = new ArrayDeque<>();
         private long lastDelay;
 
-        LoopingThread(double minDelayMs, Runnable task) {
-            this.minimumDelayMillis = minDelayMs;
+        LoopingThread(Runnable task) {
             this.task = task;
         }
 
@@ -132,7 +140,8 @@ public class ImagePainter {
                         e.printStackTrace();
                     }
                     long runEnd = System.nanoTime();
-                    long delay = (long) (minimumDelayMillis * 1_000_000) - (runEnd - runStart);
+                    long minimumDelayNanos = (long) (1_000_000_000 / targetFps);
+                    long delay = minimumDelayNanos - (runEnd - runStart);
                     if (delay > 0) {
                         lastDelay = delay;
                         delay(delay);
