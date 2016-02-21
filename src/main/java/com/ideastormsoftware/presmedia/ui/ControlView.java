@@ -1,7 +1,6 @@
 package com.ideastormsoftware.presmedia.ui;
 
 import com.ideastormsoftware.presmedia.util.ImageUtils;
-import com.ideastormsoftware.presmedia.filters.Deinterlace;
 import com.ideastormsoftware.presmedia.sources.ColorSource;
 import com.ideastormsoftware.presmedia.sources.CrossFadeProxySource;
 import com.ideastormsoftware.presmedia.filters.Lyrics;
@@ -14,8 +13,6 @@ import com.ideastormsoftware.presmedia.sources.media.AvException;
 import com.ideastormsoftware.presmedia.util.DisplayFile;
 import com.ideastormsoftware.presmedia.util.RollingAverage;
 import java.awt.Color;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -35,8 +32,9 @@ import org.hyperic.sigar.Sigar;
 import org.imgscalr.Scalr;
 
 public class ControlView extends javax.swing.JFrame {
-    
+
     static {
+
         try {
             FFmpegFrameGrabber.tryLoad();
         } catch (FrameGrabber.Exception ex) {
@@ -44,7 +42,7 @@ public class ControlView extends javax.swing.JFrame {
             ex.printStackTrace();
         }
     }
-    
+
     private final CrossFadeProxySource source;
     private final Projector projector;
     private Camera selectedCamera;
@@ -61,7 +59,7 @@ public class ControlView extends javax.swing.JFrame {
     private RollingAverage cpuAvg = new RollingAverage(5);
     private RollingAverage memAvg = new RollingAverage(5);
     private final ImageSource mediaSource = new ImageSource() {
-        
+
         @Override
         public double getFps() {
             if (activeMedia != null) {
@@ -69,7 +67,7 @@ public class ControlView extends javax.swing.JFrame {
             }
             return 0;
         }
-        
+
         @Override
         public BufferedImage get() {
             if (activeMedia != null) {
@@ -104,18 +102,12 @@ public class ControlView extends javax.swing.JFrame {
                 cpuGraph.setValue((int) cpuAvg.get());
                 memLabel.setText(String.format("MEM: %1.1f%%", memAvg.addValue(sigar.getMem().getUsedPercent())));
                 memGraph.setValue((int) memAvg.get());
-                
+
             } catch (Throwable ex) {
             }
         });
-        projector.addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent e) {
-                source.setTargetSize(projector.getRenderSize());
-            }
-        });
-        RenderPane controlPreview = new RenderPane(source);
-        outputContainer.add(controlPreview);
+//        RenderPane controlPreview = new RenderPane(source, source::getFps);
+//        outputContainer.add(controlPreview);
         RenderPane mediaPreview = new RenderPane(mediaSource);
         mediaPreviewContainer.add(mediaPreview);
         mediaPreview.setSize(201, 134);
@@ -128,7 +120,7 @@ public class ControlView extends javax.swing.JFrame {
         nameListModel = new DefaultListModel<>();
         nameList.setModel(nameListModel);
     }
-    
+
     @Override
     public void setVisible(boolean visible) {
         super.setVisible(visible);
@@ -279,6 +271,11 @@ public class ControlView extends javax.swing.JFrame {
             public Object getElementAt(int i) { return strings[i]; }
         });
         nameList.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        nameList.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+            public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
+                nameListValueChanged(evt);
+            }
+        });
         jScrollPane1.setViewportView(nameList);
 
         addName.setText("Add...");
@@ -522,6 +519,11 @@ public class ControlView extends javax.swing.JFrame {
         loopMedia.setText("Loop Selected Media Files");
 
         deinterlaceCamera.setText("Deinterlace Video");
+        deinterlaceCamera.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                deinterlaceCameraActionPerformed(evt);
+            }
+        });
 
         crossfadeFps.setText("Crossfade Proxy FPS");
 
@@ -792,7 +794,7 @@ public class ControlView extends javax.swing.JFrame {
         int index = 0;
         for (Integer cameraIndex : cameras) {
             final Camera camera = Camera.getCamera(cameraIndex);
-            final RenderPane preview = new RenderPane(ImageUtils.scaleSource(camera), camera::getFps);
+            final RenderPane preview = new RenderPane(camera);
             preview.setBorder(new LineBorder(Color.black, 2));
             preview.addMouseListener(new MouseAdapter() {
                 @Override
@@ -807,6 +809,7 @@ public class ControlView extends javax.swing.JFrame {
                     if (fireUpdate && !displayMedia.isSelected()) {
                         updatePreview();
                     }
+                    deinterlaceCamera.setSelected(camera.isDeinterlaced());
                 }
             });
             preview.setSize(160, (int) (160 / camera.getAspectRatio()));
@@ -862,13 +865,21 @@ public class ControlView extends javax.swing.JFrame {
 
     private void songListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_songListValueChanged
         if (songList.getSelectedIndex() >= 0) {
+            source.removeOverlay(selectedLyrics);
             selectedLyrics = lyricsListModel.elementAt(songList.getSelectedIndex());
+            if (showLyrics.isSelected()) {
+                source.appendOverlay(selectedLyrics);
+            }
         }
     }//GEN-LAST:event_songListValueChanged
 
     private void removeSongActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeSongActionPerformed
         if (selectedLyrics != null) {
+            source.removeOverlay(selectedLyrics);
             lyricsListModel.removeElement(selectedLyrics);
+            if (selectedLyrics.equals(activeLyrics)) {
+                activeLyrics = null;
+            }
         }
         selectedLyrics = null;
     }//GEN-LAST:event_removeSongActionPerformed
@@ -883,11 +894,11 @@ public class ControlView extends javax.swing.JFrame {
         advanceLyrics.setEnabled(showLyrics.isSelected());
         if (showLyrics.isSelected()) {
             activeLyrics = selectedLyrics;
-            activeLyrics.reset();
+            selectedLyrics.reset();
+            source.appendOverlay(selectedLyrics);
         } else {
-            activeLyrics = null;
+            source.removeOverlay(activeLyrics);
         }
-        source.setOverlay(activeLyrics);
     }//GEN-LAST:event_showLyricsActionPerformed
 
     private void mediaListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_mediaListValueChanged
@@ -935,22 +946,27 @@ public class ControlView extends javax.swing.JFrame {
 
     private void removeSlideshowActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeSlideshowActionPerformed
         if (slideList.getSelectedIndex() >= 0) {
+            source.removeOverlay(selectedSlides);
             slideListModel.removeElementAt(slideList.getSelectedIndex());
         }
     }//GEN-LAST:event_removeSlideshowActionPerformed
 
     private void showSlidesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_showSlidesActionPerformed
         if (showSlides.isSelected()) {
-            source.setOverlay(selectedSlides);
+            source.appendOverlay(selectedSlides);
         } else {
-            source.setOverlay(null);
+            source.removeOverlay(selectedSlides);
         }
 
     }//GEN-LAST:event_showSlidesActionPerformed
 
     private void slideListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_slideListValueChanged
         if (slideList.getSelectedIndex() >= 0) {
+            source.removeOverlay(selectedSlides);
             selectedSlides = slideListModel.getElementAt(slideList.getSelectedIndex());
+            if (showSlides.isSelected()) {
+                source.appendOverlay(selectedSlides);
+            }
         }
     }//GEN-LAST:event_slideListValueChanged
 
@@ -970,6 +986,7 @@ public class ControlView extends javax.swing.JFrame {
 
     private void removeNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_removeNameActionPerformed
         if (nameList.getSelectedIndex() >= 0) {
+            source.removeOverlay(nameListModel.elementAt(nameList.getSelectedIndex()));
             nameListModel.removeElementAt(nameList.getSelectedIndex());
         }
     }//GEN-LAST:event_removeNameActionPerformed
@@ -977,11 +994,11 @@ public class ControlView extends javax.swing.JFrame {
     private void displayNameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_displayNameActionPerformed
         if (displayName.isSelected()) {
             if (nameList.getSelectedIndex() >= 0) {
-                source.setOverlay(nameListModel.get(nameList.getSelectedIndex()));
+                source.appendOverlay(nameListModel.get(nameList.getSelectedIndex()));
                 return;
             }
         }
-        source.setOverlay(null);
+        source.removeOverlay(nameListModel.get(nameList.getSelectedIndex()));
     }//GEN-LAST:event_displayNameActionPerformed
 
     private void scalingMethodPickerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_scalingMethodPickerActionPerformed
@@ -1046,6 +1063,17 @@ public class ControlView extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_seekFwdActionPerformed
 
+    private void deinterlaceCameraActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deinterlaceCameraActionPerformed
+        if (selectedCamera != null) {
+            selectedCamera.setDeinterlace(deinterlaceCamera.isSelected());
+        }
+    }//GEN-LAST:event_deinterlaceCameraActionPerformed
+
+    private void nameListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_nameListValueChanged
+        source.removeOverlay(nameListModel.elementAt(nameList.getSelectedIndex()));
+        displayName.setSelected(false);
+    }//GEN-LAST:event_nameListValueChanged
+
     /**
      * @param args the command line arguments
      */
@@ -1078,7 +1106,7 @@ public class ControlView extends javax.swing.JFrame {
             }
         });
     }
-    
+
     private void warn(String message, Throwable exception) {
         JOptionPane.showMessageDialog(rootPane, message + exception.getMessage(), "Warning", JOptionPane.WARNING_MESSAGE);
     }
@@ -1154,7 +1182,7 @@ public class ControlView extends javax.swing.JFrame {
                 List<File> selectedMedia = mediaList.getSelectedValuesList();
                 Runnable callback = new Runnable() {
                     int mediaIndex = 0;
-                    
+
                     @Override
                     public void run() {
                         try {
@@ -1184,11 +1212,7 @@ public class ControlView extends javax.swing.JFrame {
             } else {
                 activeMedia = null;
                 if (displayCamera.isSelected() && selectedCamera != null) {
-                    if (deinterlaceCamera.isSelected()) {
-                        source.setSource(new Deinterlace().setSource(selectedCamera));
-                    } else {
-                        source.setSource(selectedCamera);
-                    }
+                    source.setSource(selectedCamera);
                 } else {
                     source.setSource(new ColorSource());
                 }
@@ -1198,11 +1222,11 @@ public class ControlView extends javax.swing.JFrame {
             source.setSource(new ColorSource());
         }
     }
-    
+
     private void saveSettingsToFile(File selectedFile) {
         new Settings(mediaListModel, lyricsListModel, slideListModel, nameListModel).saveToFile(selectedFile);
     }
-    
+
     private void loadSettingsFromFile(File selectedFile) throws IOException {
         new Settings(mediaListModel, lyricsListModel, slideListModel, nameListModel).loadFromFile(selectedFile);
     }

@@ -16,17 +16,15 @@
 
 package com.ideastormsoftware.presmedia.filters;
 
-import com.ideastormsoftware.presmedia.util.ImageUtils;
-import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.awt.image.SampleModel;
 import java.awt.image.WritableRaster;
 
 
-public class Deinterlace extends ImageFilter {
+public class Deinterlace implements ImageFilter {
 
     @Override
-    protected BufferedImage filter(BufferedImage source) {
+    public BufferedImage filter(BufferedImage source) {
         int w = source.getWidth();
         WritableRaster raster = source.getRaster();
         SampleModel sampleModel = raster.getSampleModel();

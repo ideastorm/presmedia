@@ -35,47 +35,35 @@ public class RenderPane extends JPanel {
     
     public RenderPane(Supplier<BufferedImage> imgSupplier, Supplier<Double> fpsSupplier)
     {
-        this(new ImageSource() {
-
-            @Override
-            public double getFps() {
-                return fpsSupplier.get();
-            }
-
-            @Override
-            public BufferedImage get() {
-                return imgSupplier.get();
-            }
-        });
+        this(new ScaledSource().setSource(imgSupplier), fpsSupplier);
     }
-
-    public RenderPane(ImageSource imgSupplier) throws HeadlessException {
+    
+    public RenderPane(ImageSource source) {
+        this(new ScaledSource().setSource(source), source::getFps);
+    }
+    
+    public RenderPane(ScaledSource source, Supplier<Double> fpsSrc) throws HeadlessException {
         setBackground(Color.black);
         setSize(320, 240);
         setDoubleBuffered(true);
-        ScaledSource source = new ScaledSource().setSource(imgSupplier);
-        source.setTargetSize(new Dimension(getWidth(), getHeight()));
         addComponentListener(new ComponentAdapter() {
 
             @Override
             public void componentHidden(ComponentEvent e) {
-                source.setActive(false);
             }
 
             @Override
             public void componentShown(ComponentEvent e) {
-                source.setActive(true);
             }
 
             @Override
             public void componentResized(ComponentEvent e) {
-                source.setTargetSize(new Dimension(getWidth(), getHeight()));
                 painter.setSize(getSize());
             }
         });
 
         painter = new ImagePainter(getSize());
-        painter.setup(source, imgSupplier::getFps, () -> {
+        painter.setup(source, fpsSrc, () -> {
             repaint(1);
         });
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Phillip Hayward <phil@pjhayward.net>.
+ * Copyright 2016 Phil Hayward <phil@pjhayward.net>.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,10 @@
  */
 package com.ideastormsoftware.presmedia.filters;
 
-import java.awt.image.BufferedImage;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
 
-public interface ImageFilter {
+public interface ImageOverlay {
 
-    public abstract BufferedImage filter(BufferedImage source);
+    public void apply(Graphics2D graphics, Dimension targetSize);
 }

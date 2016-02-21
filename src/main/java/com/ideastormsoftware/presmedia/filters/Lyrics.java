@@ -1,6 +1,5 @@
 package com.ideastormsoftware.presmedia.filters;
 
-import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -10,7 +9,7 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.util.List;
 
-public class Lyrics extends ImageFilter {
+public class Lyrics implements ImageOverlay {
 
     private String title;
     private List<String> lines;
@@ -55,7 +54,7 @@ public class Lyrics extends ImageFilter {
     }
 
     @Override
-    protected BufferedImage filter(BufferedImage original) {
+    public void apply(Graphics2D graphics, Dimension targetSize){
         //Start by finding ow wide we can be to fit in a 4:3 aspect ratio screen
         int w = targetSize.width;
         if (targetSize.width * 3 > targetSize.height * 4) {
@@ -71,10 +70,8 @@ public class Lyrics extends ImageFilter {
         Font font = Font.decode("Verdana");
         font = font.deriveFont(estimatedCharacterHeight * 72 / 96);
 
-        BufferedImage filtered = ImageUtils.copy(original);
-        Graphics2D g = filtered.createGraphics();
-        g.setColor(new Color(0, 0, 0, 127));
-        g.fillRect(offset / 2, vOffset - offset / 2, shadowWidth, totalHeight + offset / 2);
+        graphics.setColor(new Color(0, 0, 0, 127));
+        graphics.fillRect(offset / 2, vOffset - offset / 2, shadowWidth, totalHeight + offset / 2);
         BufferedImage text = new BufferedImage(w, totalHeight, BufferedImage.TYPE_4BYTE_ABGR);
         Graphics2D t = text.createGraphics();
         t.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
@@ -88,8 +85,7 @@ public class Lyrics extends ImageFilter {
             t.drawString(lines.get(i), 0, lineOffset);
             lineOffset += estimatedCharacterHeight;
         }
-        g.drawImage(text, offset, vOffset - offset / 4, null);
-        return filtered;
+        graphics.drawImage(text, offset, vOffset - offset / 4, null);
     }
 
     public String getTitle() {

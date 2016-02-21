@@ -15,6 +15,7 @@
  */
 package com.ideastormsoftware.presmedia.sources;
 
+import com.ideastormsoftware.presmedia.filters.Deinterlace;
 import com.ideastormsoftware.presmedia.util.Stats;
 import com.ideastormsoftware.presmedia.util.ImageUtils;
 import de.humatic.dsj.DSCapture;
@@ -35,6 +36,7 @@ public class Camera implements ImageSource, PropertyChangeListener {
 
     private static final ConcurrentHashMap<Integer, Camera> cameras = new ConcurrentHashMap<>();
     private static final List<DSFilterInfo> cameraInfo = new ArrayList<>();
+    private static final Deinterlace deinterlacer = new Deinterlace();
 
     public static Camera getCamera(int cameraIndex) {
         return cameras.computeIfAbsent(cameraIndex, Camera::new);
@@ -53,6 +55,7 @@ public class Camera implements ImageSource, PropertyChangeListener {
     private final Stats captureStats = new Stats();
     private final DSCapture capture;
     private BufferedImage currentImage = ImageUtils.emptyImage();
+    private boolean deinterlace;
 
     static {
         DSEnvironment.unlockDLL("phil@pjhayward.net", 753608, 1702561, 0);
@@ -80,6 +83,14 @@ public class Camera implements ImageSource, PropertyChangeListener {
         deviceInfo = cameraInfo.get(cameraIndex);
         System.out.printf("Attempting to start %s\n", deviceInfo.toString());
         capture = new DSCapture(DSFiltergraph.JAVA_POLL | DSFiltergraph.FRAME_CALLBACK, deviceInfo, false, DSFilterInfo.doNotRender(), this);
+    }
+
+    public void setDeinterlace(boolean deinterlace) {
+        this.deinterlace = deinterlace;
+    }
+
+    public boolean isDeinterlaced() {
+        return deinterlace;
     }
 
     public Set<Integer> supportedDialogs() {
@@ -149,7 +160,7 @@ public class Camera implements ImageSource, PropertyChangeListener {
             case DSFiltergraph.KF_NOTIFY:
             case DSFiltergraph.FRAME_NOTIFY:
                 long start = System.nanoTime();
-                this.currentImage = capture.getImage();
+                this.currentImage = deinterlace? deinterlacer.filter(capture.getImage()):capture.getImage();
                 captureStats.addValue(System.nanoTime() - start);
                 break;
             default:

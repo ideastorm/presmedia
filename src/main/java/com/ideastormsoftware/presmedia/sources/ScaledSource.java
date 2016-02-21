@@ -15,98 +15,42 @@
  */
 package com.ideastormsoftware.presmedia.sources;
 
-import com.ideastormsoftware.presmedia.ui.ImagePainter;
 import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 /**
  *
  * @author Phillip Hayward <phil@pjhayward.net>
  */
-public class ScaledSource implements Supplier<BufferedImage>, Runnable {
+public class ScaledSource {
 
-    public Supplier<BufferedImage> source;
-    protected Dimension targetSize = new Dimension(1280, 720);
-    private BufferedImage scaledImage = ImageUtils.emptyImage();
-    private boolean active = true;
-    private boolean shutdown = false;
-    private long lastGet = System.currentTimeMillis();
-    private final Object syncPoint = new Object();
-    private Thread workerThread = null;
+    public Supplier<BufferedImage> source = new ColorSource();
 
-    public ScaledSource() {
-
-    }
-
-    public <T extends ScaledSource> T setSource(Supplier<BufferedImage> source) {
+    public ScaledSource setSource(Supplier<BufferedImage> source) {
+        if (source == null) {
+            source = new ColorSource();
+        }
         this.source = source;
-        return (T) this;
+        return this;
     }
-    
-    public void scaleInto(Graphics2D graphics) {
-        ImageUtils.drawAspectScaled(graphics, source.get(), targetSize);
-    }
-    
-    @Override
-    public BufferedImage get() {
-        synchronized (syncPoint) {
-            lastGet = System.currentTimeMillis();
-            if (workerThread == null) {
-                workerThread = new Thread(this, getClass().getSimpleName());
-                workerThread.start();
-            }
+
+    public void scaleInto(Graphics2D graphics, Dimension targetSize) {
+        if (graphics == null) {
+            throw new IllegalArgumentException("graphics is null");
         }
-        return scaledImage;
-    }
-
-    public void setTargetSize(Dimension size) {
-        this.targetSize = size;
-    }
-
-    private void delay(long ms) {
-        try {
-            Thread.sleep(ms);
-        } catch (InterruptedException ex) {
-            shutdown = true;
+        if (source == null) {
+            throw new IllegalArgumentException("source is null");
         }
-    }
-
-    private void log(String format, Object... params) {
-        System.out.printf(String.format("%s: ", Thread.currentThread().getName())+format + "\n", params);
-    }
-
-    @Override
-    public void run() {
-        boolean shouldExit = false;
-        while (!shutdown && !shouldExit) {
-            synchronized (syncPoint) {
-                shouldExit = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - lastGet) > 5;
-            }
-            long start = System.currentTimeMillis();
-            if (active) {
-                BufferedImage image = source.get();
-                setScaledImage(ImageUtils.copyAspectScaled(image, targetSize));
-            }
-            long runDelay = (long) (1000 / ImagePainter.getFrameRate());
-            long delay = runDelay - (System.currentTimeMillis() - start);
-            if (delay > 0) {
-                delay(delay);
-            }
+        if (targetSize == null) {
+            throw new IllegalArgumentException("targetSize is null");
         }
-        synchronized (syncPoint) {
-            workerThread = null;
-        }
+        drawScaled(graphics, source.get(), targetSize);
     }
 
-    public void setActive(boolean b) {
-        this.active = b;
-    }
-
-    protected void setScaledImage(BufferedImage img) {
-        scaledImage = img;
+    protected void drawScaled(Graphics2D graphics, BufferedImage image, Dimension targetSize) {
+        ImageUtils.drawAspectScaled(graphics, image, targetSize);
     }
 }

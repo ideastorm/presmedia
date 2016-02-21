@@ -83,6 +83,7 @@ public final class ImageUtils {
     }
 
     public static BufferedImage emptyImage(Dimension size) {
+        size = new Dimension(size.width > 0 ? size.width : 1, size.height > 0 ? size.height : 1);
         return new BufferedImage(size.width, size.height, BufferedImage.TYPE_4BYTE_ABGR);
     }
 
@@ -104,9 +105,11 @@ public final class ImageUtils {
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         g.setColor(Color.black);
         g.fillRect(0, 0, width, height);
-        Dimension scaledSize = aspectScaledSize(img.getWidth(), img.getHeight(), width, height);
-        Point offset = new Point((width - (int) scaledSize.width) / 2, (height - (int) scaledSize.height) / 2);
-        g.drawImage(img, offset.x, offset.y, (int) scaledSize.width, (int) scaledSize.height, null);
+        if (img != null) {
+            Dimension scaledSize = aspectScaledSize(img.getWidth(), img.getHeight(), width, height);
+            Point offset = new Point((width - (int) scaledSize.width) / 2, (height - (int) scaledSize.height) / 2);
+            g.drawImage(img, offset.x, offset.y, (int) scaledSize.width, (int) scaledSize.height, null);
+        }
     }
 
     public static ScaledSource scaleSource(Supplier<BufferedImage> source) {

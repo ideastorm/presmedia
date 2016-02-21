@@ -17,80 +17,66 @@ package com.ideastormsoftware.presmedia.sources;
 
 import com.ideastormsoftware.presmedia.util.Stats;
 import com.ideastormsoftware.presmedia.util.ImageUtils;
-import com.ideastormsoftware.presmedia.filters.ImageFilter;
+import com.ideastormsoftware.presmedia.filters.ImageOverlay;
 import java.awt.AlphaComposite;
+import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 
-public class CrossFadeProxySource extends ScaledSource implements ImageSource {
+public class CrossFadeProxySource extends ScaledSource {
 
     private Supplier<BufferedImage> fadeIntoSource;
     private static final double fadeDuration = 0.5;
     private long fadeStartTime;
     private final Stats stats = new Stats();
+    private final List<ImageOverlay> postScaleOverlays = new ArrayList<>();
+
+    public void appendOverlay(ImageOverlay overlay) {
+        synchronized (postScaleOverlays) {
+            postScaleOverlays.add(overlay);
+        }
+    }
+
+    public void removeOverlay(ImageOverlay overlay) {
+        synchronized (postScaleOverlays) {
+            postScaleOverlays.remove(overlay);
+        }
+    }
 
     @Override
-    public <T extends ScaledSource> T setSource(Supplier<BufferedImage> source) {
+    public ScaledSource setSource(Supplier<BufferedImage> source) {
         stats.reset();
         if (source instanceof Startable) {
             ((Startable) source).start();
         }
-        if (this.source instanceof ImageFilter) {
-            ImageFilter filterSource = (ImageFilter) this.source;
-            if (filterSource.getSource() instanceof CleanCloseable) {
-                ((CleanCloseable) filterSource.getSource()).close();
+        if (fadeIntoSource != null) {
+            if (this.source instanceof CleanCloseable) {
+                ((CleanCloseable) this.source).close();
             }
-            filterSource.setSource(source);
-        } else {
-            if (fadeIntoSource != null) {
-                if (this.source instanceof CleanCloseable) {
-                    ((CleanCloseable) this.source).close();
-                }
-                this.source = fadeIntoSource;
-            }
-            setFadeSourceInternal(source);
+            this.source = fadeIntoSource;
         }
-        return (T) this;
+        setFadeSourceInternal(source);
+        return this;
     }
 
     public CrossFadeProxySource setSourceNoFade(Supplier<BufferedImage> source) {
         if (source instanceof Startable) {
             ((Startable) source).start();
         }
-        if (this.source instanceof ImageFilter) {
-            ImageFilter filterSource = (ImageFilter) this.source;
-            if (filterSource.getSource() instanceof CleanCloseable) {
-                ((CleanCloseable) filterSource.getSource()).close();
-            }
-            filterSource.setSource(source);
-        } else {
-            if (this.source instanceof CleanCloseable) {
-                ((CleanCloseable) this.source).close();
-            }
-            this.source = source;
-            fadeIntoSource = null;
+        if (this.source instanceof CleanCloseable) {
+            ((CleanCloseable) this.source).close();
         }
+        this.source = source;
+        fadeIntoSource = null;
         return this;
     }
 
     private void setFadeSourceInternal(Supplier<BufferedImage> source) {
         fadeIntoSource = source;
         fadeStartTime = System.nanoTime();
-    }
-
-    public void setOverlay(ImageFilter overlay) {
-        Supplier<BufferedImage> baseSource = source;
-        if (baseSource instanceof ImageFilter) {
-            baseSource = ((ImageFilter) baseSource).getSource();
-        }
-        if (overlay == null) {
-            setFadeSourceInternal(baseSource);
-        } else {
-            overlay.setTargetSize(targetSize);
-            overlay.setSource(baseSource);
-            setFadeSourceInternal(overlay);
-        }
     }
 
     private float findAlpha() {
@@ -104,22 +90,16 @@ public class CrossFadeProxySource extends ScaledSource implements ImageSource {
     }
 
     @Override
-    protected void setScaledImage(BufferedImage img) {
+    protected void drawScaled(Graphics2D g, BufferedImage img, Dimension targetSize) {
         long startTime = System.nanoTime();
-        BufferedImage baseImage = ImageUtils.emptyImage(targetSize);
-        Graphics2D g = baseImage.createGraphics();
         ImageUtils.drawAspectScaled(g, img, targetSize);
         if (fadeIntoSource != null) {
             BufferedImage overlayImage = ImageUtils.copyAspectScaled(fadeIntoSource.get(), targetSize);
             float alpha = findAlpha();
             if (alpha >= 1) {
                 alpha = 1;
-                boolean sourceStillActive = false;
-                if (fadeIntoSource instanceof ImageFilter) {
-                    sourceStillActive = ((ImageFilter) fadeIntoSource).getSource().equals(source);
-                }
-                if (this.source instanceof CleanCloseable && !sourceStillActive) {
-                    ((CleanCloseable) this.source).close();
+                if (source instanceof CleanCloseable) {
+                    ((CleanCloseable) source).close();
                 }
                 source = fadeIntoSource;
                 fadeIntoSource = null;
@@ -127,11 +107,12 @@ public class CrossFadeProxySource extends ScaledSource implements ImageSource {
             g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
             ImageUtils.drawAspectScaled(g, overlayImage, targetSize);
         }
-        stats.addValue(System.nanoTime()-startTime);
-        super.setScaledImage(baseImage);
+        for (ImageOverlay overlay : postScaleOverlays) {
+            overlay.apply(g, targetSize);
+        }
+        stats.addValue(System.nanoTime() - startTime);
     }
 
-    @Override
     public double getFps() {
         return stats.getRate();
     }

@@ -380,6 +380,9 @@
                 </Property>
                 <Property name="selectionMode" type="int" value="0"/>
               </Properties>
+              <Events>
+                <EventHandler event="valueChanged" listener="javax.swing.event.ListSelectionListener" parameters="javax.swing.event.ListSelectionEvent" handler="nameListValueChanged"/>
+              </Events>
             </Component>
           </SubComponents>
         </Container>
@@ -614,6 +617,9 @@
       <Properties>
         <Property name="text" type="java.lang.String" value="Deinterlace Video"/>
       </Properties>
+      <Events>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="deinterlaceCameraActionPerformed"/>
+      </Events>
     </Component>
     <Container class="javax.swing.JPanel" name="jPanel3">
 
