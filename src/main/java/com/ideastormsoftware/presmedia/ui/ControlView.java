@@ -59,7 +59,6 @@ public class ControlView extends javax.swing.JFrame {
     private RollingAverage cpuAvg = new RollingAverage(5);
     private RollingAverage memAvg = new RollingAverage(5);
     private final ImageSource mediaSource = new ImageSource() {
-
         @Override
         public double getFps() {
             if (activeMedia != null) {

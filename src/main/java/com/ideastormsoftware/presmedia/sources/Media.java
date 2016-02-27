@@ -29,16 +29,15 @@ import com.ideastormsoftware.presmedia.sources.media.PlanarIntConverter;
 import com.ideastormsoftware.presmedia.sources.media.InterleavedIntConverter;
 import com.ideastormsoftware.presmedia.sources.media.AudioConverter;
 import com.ideastormsoftware.presmedia.sources.media.PlanarShortConverter;
-import com.ideastormsoftware.presmedia.ui.ImagePainter;
 import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
@@ -68,14 +67,17 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
     private volatile boolean postSeekBuffer = false;
     private volatile int minimumSamples = 0;
     private volatile int minimumFrames = 0;
-    private final BlockingQueue<DataFrame<byte[]>> samples = new ArrayBlockingQueue<>(256);
-    private final BlockingQueue<DataFrame<BufferedImage>> frames = new ArrayBlockingQueue<>(256);
+    private static final int QUEUE_CAPACITY = 128;
+    private final Queue<BufferedImage> imageBuffer = new ConcurrentLinkedQueue<>();
+    private final Queue<DataFrame<byte[]>> samples = new ConcurrentLinkedQueue<>();
+    private final Queue<DataFrame<BufferedImage>> frames = new ConcurrentLinkedQueue<>();
+    private final AtomicInteger sampleQueueSize = new AtomicInteger(0);
+    private final AtomicInteger frameQueueSize = new AtomicInteger(0);
     private FFmpegFrameGrabber ffmpeg;
 
     private final String sourceFile;
-    private final Object imageLock = new Object();
-    private BufferedImage currentImage = new BufferedImage(1, 1, BufferedImage.TYPE_3BYTE_BGR);
-    private Stats fpsStats = new Stats();
+    private volatile BufferedImage currentImage = null;
+    private final Stats fpsStats = new Stats();
 
     private static void log(String format, Object... params) {
         System.out.println(String.format("%d %s - %s", System.currentTimeMillis(),
@@ -83,6 +85,8 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
     }
     private long mediaPosition;
     private long mediaDuration;
+    private double frameRate;
+    private long videoPosition;
 
     public Media(String sourceFile, Runnable callback) {
         this.sourceFile = sourceFile;
@@ -105,9 +109,10 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
 
     @Override
     public BufferedImage get() {
-        synchronized (imageLock) {
-            return currentImage;
+        if (currentImage == null) {
+            return ImageUtils.emptyImage();
         }
+        return currentImage;
     }
 
     @Override
@@ -129,13 +134,20 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
         }
         boolean pauseState = paused;
         setPaused(true);
+        delay(5, TimeUnit.MILLISECONDS);
         ffmpeg.setTimestamp(position);
-        frames.clear();
+        frameQueueSize.set(0);
+        imageBuffer.offer(currentImage);
+        currentImage = null;
+        while (!frames.isEmpty()) {
+            imageBuffer.offer(frames.poll().data);
+        }
+        sampleQueueSize.set(0);
         samples.clear();
         postSeekBuffer = true;
         do {
             delay(2);
-        } while (frames.size() < minimumFrames && samples.size() < minimumSamples);
+        } while (frameQueueSize.get() < minimumFrames && sampleQueueSize.get() < minimumSamples);
         updatePausedImage();
         setMediaPosition(position);
         setPaused(pauseState);
@@ -147,11 +159,11 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
     }
 
     public int getAudioBufferLoad() {
-        return samples.size() * 100 / 256;
+        return Math.min(sampleQueueSize.get() * 100 / QUEUE_CAPACITY, 100);
     }
 
     public int getVideoBufferLoad() {
-        return frames.size() * 100 / 256;
+        return Math.min(frameQueueSize.get() * 100 / QUEUE_CAPACITY, 100);
     }
 
     private void openJavaSound(int sampleFormat, int audioChannels, float sampleRate) throws FileNotFoundException {
@@ -269,6 +281,13 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
         return new String(bytes);
     }
 
+    private void delay(long number, TimeUnit units) {
+        try {
+            units.sleep(number);
+        } catch (InterruptedException ex) {
+        }
+    }
+
     private void delay(long millis) {
         try {
             Thread.sleep(millis);
@@ -279,6 +298,10 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
     @Override
     public double getFps() {
         return fpsStats.getRate();
+    }
+    
+    public long getVideoPosition() {
+        return videoPosition;
     }
 
     public long getMediaPosition() {
@@ -291,6 +314,10 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
 
     private class GrabberThread extends Thread {
 
+        public GrabberThread() {
+            super("FrameGrabThread");
+        }
+
         private volatile boolean canceled = false;
 
         @Override
@@ -299,12 +326,6 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
             boolean normalExit = false;
             VideoThread videoThread = new VideoThread();
             AudioThread audioThread = new AudioThread();
-            Stats audioStats = new Stats();
-            Stats videoStats = new Stats();
-            Stats audioBuffer = new Stats();
-            Stats videoBuffer = new Stats();
-            Stats audioProcessing = new Stats();
-            Stats videoProcessing = new Stats();
             try {
                 try {
                     ffmpeg = FFmpegFrameGrabber.createDefault(getSourceFile());
@@ -317,7 +338,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                         minimumFrames = ffmpeg.getVideoBitrate() < 0 ? 0 : 5;
                         minimumSamples = ffmpeg.getAudioBitrate() < 0 ? 0 : 5;
                         if (minimumFrames > 0) {
-                            ImagePainter.setFrameRate(ffmpeg.getFrameRate());
+                            Media.this.frameRate = ffmpeg.getFrameRate();
                         }
                         while (!canceled && !interrupted()) {
                             if (paused && !postSeekBuffer) {
@@ -326,19 +347,28 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                                 try {
                                     long start = System.nanoTime();
                                     Frame frame = ffmpeg.grabFrame();
-                                    long captureTime = System.nanoTime() - start;
                                     if (frame != null) {
-                                        audioBuffer.addValue(samples.size());
-                                        videoBuffer.addValue(frames.size());
                                         if (frame.samples != null) {
-                                            audioStats.addValue(captureTime);
-                                            samples.put(new DataFrame(converter.prepareSamplesForPlayback(frame.samples), frame.timestamp));
-                                            audioProcessing.addValue(System.nanoTime() - start);
+                                            sampleQueueSize.incrementAndGet();
+                                            samples.offer(new DataFrame(converter.prepareSamplesForPlayback(frame.samples), frame.timestamp, frame.duration));
                                         }
                                         if (frame.image != null) {
-                                            videoStats.addValue(captureTime);
-                                            frames.put(new DataFrame(ImageUtils.copy(frame.image), frame.timestamp));
-                                            videoProcessing.addValue(System.nanoTime() - start);
+                                            if (!started && imageBuffer.isEmpty()) {
+                                                for (int i = 0; i < QUEUE_CAPACITY; i++) {
+                                                    imageBuffer.offer(new BufferedImage(frame.image.getWidth(), frame.image.getHeight(), BufferedImage.TYPE_3BYTE_BGR));
+                                                }
+                                            }
+                                            while (frameQueueSize.get() > QUEUE_CAPACITY * 0.9) //try to make sure we're not overwriting an image before it's rendered
+                                            {
+                                                delay(2);
+                                            }
+                                            while (imageBuffer.isEmpty()) {
+                                                delay(2);
+                                            }
+                                            BufferedImage image = imageBuffer.poll();
+                                            image.createGraphics().drawImage(frame.image, 0, 0, null);
+                                            frameQueueSize.incrementAndGet();
+                                            frames.offer(new DataFrame(image, frame.timestamp, frame.duration));
                                         }
                                     } else {
                                         normalExit = true;
@@ -349,20 +379,17 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                                         videoThread.start();
                                         started = true;
                                     }
-                                } catch (InterruptedException ex) {
-                                    log("got interrupted");
-                                    return;
                                 } catch (Exception e) {
                                     e.printStackTrace();
-                                    synchronized (imageLock) {
-                                        currentImage = ImageUtils.emptyImage();
-                                    }
+                                    currentImage = ImageUtils.emptyImage();
                                 }
                             }
                         }
                         if (normalExit) {
                             try {
                                 while (!samples.isEmpty() && !frames.isEmpty()) {
+                                    minimumFrames = frames.isEmpty() ? 0 : 1;
+                                    minimumSamples = samples.isEmpty() ? 0 : 1;
                                     Thread.sleep(5);
                                 }
                             } catch (InterruptedException e) {
@@ -379,18 +406,11 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                         ffmpeg.release();
                         closeJavaSound();
                         log("processing thread terminated");
-                        ImagePainter.setFrameRate(29.97);
                     }
                 } catch (Throwable ex) {
                     ex.printStackTrace();
                 }
             } finally {
-                audioStats.report("Audio frames");
-                videoStats.report("Video frames");
-                audioBuffer.report("Audio buffer");
-                videoBuffer.report("Video buffer");
-                audioProcessing.report("Audio processing");
-                videoProcessing.report("Video processing");
                 log("exited thread lock - ready to go with the next thread");
                 if (normalExit) {
                     callback.run();
@@ -407,11 +427,10 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
     }
 
     private void updatePausedImage() {
-        DataFrame<BufferedImage> frame = frames.peek();
-        if (frame != null) {
-            BufferedImage image = frame.data;
-            synchronized (imageLock) {
-                currentImage = image;
+        if (minimumFrames > 0) {
+            DataFrame<BufferedImage> frame = frames.peek();
+            if (frame != null) {
+                currentImage = frame.data;
             }
         }
     }
@@ -423,35 +442,47 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
         private final Stats fastVideo = new Stats();
         private final Stats slowVideo = new Stats();
 
+        public VideoThread() {
+            super("VideoThread");
+        }
+
+        private long microTime() {
+            return System.nanoTime() / 1000;
+        }
+
         @Override
         public void run() {
-            long lastFrame = System.nanoTime() / 1000;
+            long lastFrame = microTime();
+            Stats interframeStats = new Stats();
+            interframeStats.addValue((long) (1_000_000 / frameRate));
             try {
                 while (!canceled && !interrupted()) {
-                    long interframe = (long) (1_000_000 / ImagePainter.getFrameRate());
                     if (paused) {
                         delay(2);
-                        lastFrame = System.nanoTime() / 1000;
+                        lastFrame = microTime();
                     } else {
-                        try {
-                            DataFrame<BufferedImage> frame = frames.take();
+                        long interframe = interframeStats.getAverage();
+                        long frameStart = microTime();
+                        double targetTime = lastFrame + interframe;
+                        DataFrame<BufferedImage> frame = frames.poll();
+                        if (frame != null) {
+                            frameQueueSize.decrementAndGet();
                             BufferedImage image = frame.data;
-                            synchronized (imageLock) {
-                                currentImage = image;
+                            if (currentImage != null) {
+                                imageBuffer.offer(currentImage); //recycle it!
                             }
-                            long now = System.nanoTime() / 1000;
-                            long mediaPosition = getMediaPosition();
-
-                            double targetTime = lastFrame + interframe;
-                            //if delta > 0, we're ahead of the audio, and need to sleep longer
-                            long delta = frame.timestamp - mediaPosition;
+                            currentImage = image;
                             if (minimumSamples > 0) {
-                                if (delta > interframe) {
-                                    targetTime = lastFrame + interframe + delta * 1.5;
+                                long mediaPosition = getMediaPosition();
+                                long delta = frame.timestamp - mediaPosition;
+                                boolean fast = frame.timestamp > mediaPosition;
+                                boolean slow = frame.timestamp + interframe < mediaPosition;
+                                if (fast) {
                                     fastVideo.addValue(delta);
-                                } else if (delta < 0) {
+                                    targetTime += delta / 2;
+                                } else if (slow) {
                                     slowVideo.addValue(delta);
-                                    targetTime = lastFrame + interframe * 0.8;
+                                    targetTime += delta / 4;
                                 } else {
                                     closeMatch.addValue(delta);
                                     targetTime = lastFrame + interframe;
@@ -459,24 +490,30 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                             } else {
                                 setMediaPosition(frame.timestamp);
                             }
-
-                            if (now < targetTime) {
-                                long delay = (long) (targetTime - now);
-                                fpsStats.addValue(delay);
-                                TimeUnit.MICROSECONDS.sleep(delay);
-                            } else {
-                                fpsStats.addValue(0);
-                            }
-                            lastFrame = now;
-                        } catch (InterruptedException ex) {
-                            return;
+                            videoPosition = frame.timestamp;
                         }
+                        long predelayMicros = microTime();
+                        if (predelayMicros < targetTime) {
+                            long delay = Math.min((long) (targetTime - predelayMicros), interframe*5);
+                            fpsStats.addValue(delay);
+                            TimeUnit.MICROSECONDS.sleep(delay);
+                        } else {
+                            fpsStats.addValue(0);
+                        }
+                        interframeStats.addValue(microTime() - frameStart);
+                        lastFrame = frameStart;
                     }
                 }
+            } catch (InterruptedException e) {
+                //just exit
+            } catch (Throwable e) {
+                e.printStackTrace();
             } finally {
-                fastVideo.report("Video running fast");
-                slowVideo.report("Video running slow");
-                closeMatch.report("A/V sync");
+                interframeStats.report("Interframe spacing", 0.001);
+                fastVideo.report("Video running fast", 0.001);
+                slowVideo.report("Video running slow", 0.001);
+                closeMatch.report("A/V sync", 0.001);
+                fpsStats.report("post-processing delay", 0.001);
             }
         }
     }
@@ -484,7 +521,10 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
     private class AudioThread extends Thread {
 
         volatile boolean canceled = false;
-        private long lastTs = 0;
+
+        public AudioThread() {
+            super("AudioThread");
+        }
 
         @Override
         public void run() {
@@ -492,17 +532,15 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                 if (paused) {
                     delay(2);
                 } else {
-                    try {
-                        DataFrame<byte[]> frame = samples.take();
+                    DataFrame<byte[]> frame = samples.poll();
+                    if (frame != null) {
+                        sampleQueueSize.decrementAndGet();
                         byte[] buffer = frame.data;
 
                         if (mLine != null) {
                             mLine.write(buffer, 0, buffer.length);
                         }
-                        setMediaPosition(lastTs);
-                        lastTs = frame.timestamp;
-                    } catch (InterruptedException ex) {
-                        return;
+                        setMediaPosition(frame.timestamp + frame.duration);
                     }
                 }
             }
@@ -513,10 +551,12 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
 
         final T data;
         final long timestamp;
+        final long duration;
 
-        DataFrame(T data, long timestamp) {
+        DataFrame(T data, long timestamp, long duration) {
             this.data = data;
             this.timestamp = timestamp;
+            this.duration = duration;
         }
     }
 }

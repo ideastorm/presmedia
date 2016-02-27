@@ -16,38 +16,31 @@
 package com.ideastormsoftware.presmedia.ui;
 
 import com.ideastormsoftware.presmedia.sources.ScaledSource;
-import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 public class ImagePainter {
 
-    private static double targetFps = 29.97;
+    private static int targetFps = 30; //set to screen refresh rate /2
 
     private static void log(String format, Object... params) {
         System.out.printf(format + "\n", params);
     }
     private LoopingThread paintTimer;
-    private LoopingThread prepTimer;
     private int width;
     private int height;
     private Supplier<Double> fpsSource;
-    private ScaledSource source;
-    private BufferedImage nextImage;
-    private final Object imgLock = new Object();
 
-    public static void setFrameRate(double targetFps) {
+    public static void setFrameRate(int targetFps) {
         ImagePainter.targetFps = targetFps;
     }
 
-    public static double getFrameRate() {
-        return ImagePainter.targetFps;
-    }
+    private ScaledSource source;
 
     ImagePainter(Dimension size) {
         this.width = (int) size.getWidth();
@@ -60,34 +53,22 @@ public class ImagePainter {
 
     public void setup(ScaledSource source, Supplier<Double> fpsSource, Runnable callback) {
         this.fpsSource = fpsSource;
-        this.source = source;
         this.paintTimer = new LoopingThread(() -> {
             if (callback != null) {
                 callback.run();
             }
         });
-        this.prepTimer = new LoopingThread(() -> {
-            final Dimension size = new Dimension(width, height);
-            BufferedImage image = ImageUtils.emptyImage(size);
-            source.scaleInto(image.createGraphics(), size);
-            synchronized (imgLock) {
-                nextImage = image;
-            }
-        });
-        prepTimer.start();
+        this.source = source;
         paintTimer.start();
     }
 
     public void paint(Graphics2D g) {
         g.setColor(Color.black);
         g.fillRect(0, 0, width, height);
-        BufferedImage image = null;
-        synchronized (imgLock) {
-            image = nextImage;
-        }
-        g.drawImage(image, 0, 0, null);
+        final Dimension size = new Dimension(width, height);
+        source.scaleInto(g, size);
         if (fpsSource != null) {
-            String fps = String.format("FPS: %01.1f SRC FPS: %01.1f", paintTimer.getRate(), fpsSource.get());
+            String fps = String.format("FPS: %01.1f SFPS: %01.1f", paintTimer.getRate(), fpsSource.get());
             g.setColor(Color.black);
             g.drawString(fps, 5, height - 16);
             g.setColor(Color.white);
@@ -105,16 +86,13 @@ public class ImagePainter {
 
         private final Runnable task;
         private Queue<Long> startTimes = new ArrayDeque<>();
-        private long lastDelay;
 
         LoopingThread(Runnable task) {
             this.task = task;
         }
 
         private void delay(long nanos) throws InterruptedException {
-            long millis = nanos / 1_000_000;
-            int remainingNanos = (int) (nanos % 1_000_000);
-            Thread.sleep(millis, remainingNanos);
+            TimeUnit.NANOSECONDS.sleep(nanos);
         }
 
         public double getRate() {
@@ -122,10 +100,6 @@ public class ImagePainter {
                 return 0;
             }
             return startTimes.size() / ((System.nanoTime() - startTimes.peek()) / 1_000_000_000.0);
-        }
-
-        public double getLastDelay() {
-            return lastDelay / 1_000_000d; //convert to millis
         }
 
         @Override
@@ -147,10 +121,7 @@ public class ImagePainter {
                     long minimumDelayNanos = (long) (1_000_000_000 / targetFps);
                     long delay = minimumDelayNanos - (runEnd - runStart);
                     if (delay > 0) {
-                        lastDelay = delay;
                         delay(delay);
-                    } else {
-                        lastDelay = 0;
                     }
                 }
             } catch (InterruptedException e) {

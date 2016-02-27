@@ -69,6 +69,8 @@ import static org.bytedeco.javacpp.swscale.*;
  */
 public class FFmpegFrameGrabber {
 
+    public static long AVSyncOffset = 50_000; //usec to add to video timestamps to adust a/v sync (1000 = 1ms)
+
     public static String[] getDeviceDescriptions() throws Exception {
         tryLoad();
         throw new UnsupportedOperationException("Device enumeration not support by FFmpeg.");
@@ -122,6 +124,7 @@ public class FFmpegFrameGrabber {
         } catch (Exception ex) {
         }
     }
+    private BufferedImage image;
 
     public FFmpegFrameGrabber(File file) {
         this(file.getAbsolutePath());
@@ -458,14 +461,16 @@ public class FFmpegFrameGrabber {
         release();
     }
 
-    public static BufferedImage convertFrame(AVFrame pFrame, int width, int height) {
-        BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
+    public BufferedImage convertFrame(AVFrame pFrame, int width, int height) {
+        if (image == null) {
+            image = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
+        }
 
         // Write pixel data
         byte[] bytes = new byte[width * height * 3];
         pFrame.data(0).get(bytes);
-        img.getRaster().setDataElements(0, 0, width, height, bytes);
-        return img;
+        image.getRaster().setDataElements(0, 0, width, height, bytes);
+        return image;
     }
 
     private BufferedImage processImage() throws AvException {
@@ -516,6 +521,9 @@ public class FFmpegFrameGrabber {
             if (processImage) {
                 frame.image = processImage();
             }
+            frame.timestamp = calcTimestamp(pkt.pts(), video_st.time_base());
+            timestamp = frame.timestamp;
+            frame.duration = calcTimestamp(pkt.duration(), video_st.time_base());
             frame.keyFrame = picture.key_frame() != 0;
             return frame;
         }
@@ -544,14 +552,13 @@ public class FFmpegFrameGrabber {
                 // Did we get a video frame?
                 if (len >= 0 && got_frame[0] != 0
                         && (!keyFrames || picture.pict_type() == AV_PICTURE_TYPE_I)) {
-                    long pts = av_frame_get_best_effort_timestamp(picture);
-                    AVRational time_base = video_st.time_base();
-                    timestamp = 1000000L * pts * time_base.num() / time_base.den();
-                    frame.timestamp = timestamp;
+                    frame.timestamp = calcTimestamp(pkt.pts(), video_st.time_base());
+                    frame.duration = calcTimestamp(pkt.duration(), video_st.time_base());
+                    timestamp = frame.timestamp;
                     // best guess, AVCodecContext.frame_number = number of decoded frames...
                     frameNumber = (int) (timestamp * getFrameRate() / 1000000L);
                     if (processImage) {
-                        frame.image=processImage();
+                        frame.image = processImage();
                     }
                     done = true;
                     frame.keyFrame = picture.key_frame() != 0;
@@ -574,10 +581,9 @@ public class FFmpegFrameGrabber {
                     pkt2.data(pkt2.data().position(len));
                     pkt2.size(pkt2.size() - len);
                     if (got_frame[0] != 0) {
-                        long pts = av_frame_get_best_effort_timestamp(samples_frame);
-                        AVRational time_base = audio_st.time_base();
-                        timestamp = 1000000L * pts * time_base.num() / time_base.den();
-                        frame.timestamp = timestamp;
+                        frame.timestamp = calcTimestamp(pkt2.pts(), audio_st.time_base());
+                        frame.duration = calcTimestamp(pkt2.duration(), audio_st.time_base());
+                        timestamp = frame.timestamp;
                         /* if a frame has been decoded, output it */
                         done = true;
                         int sample_format = samples_frame.format();
@@ -635,5 +641,9 @@ public class FFmpegFrameGrabber {
             }
         }
         return frame;
+    }
+
+    private long calcTimestamp(long pts, AVRational time_base) {
+        return 1_000_000L * pts * time_base.num() / time_base.den();
     }
 }

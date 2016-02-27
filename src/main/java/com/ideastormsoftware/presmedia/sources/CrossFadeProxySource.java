@@ -33,6 +33,8 @@ public class CrossFadeProxySource extends ScaledSource {
     private long fadeStartTime;
     private final Stats stats = new Stats();
     private final List<ImageOverlay> postScaleOverlays = new ArrayList<>();
+    private BufferedImage lastImage = null;
+    private final Stats duplicates = new Stats();
 
     public void appendOverlay(ImageOverlay overlay) {
         synchronized (postScaleOverlays) {
@@ -48,6 +50,8 @@ public class CrossFadeProxySource extends ScaledSource {
 
     @Override
     public ScaledSource setSource(Supplier<BufferedImage> source) {
+        reportDuplicates();
+        duplicates.reset();
         stats.reset();
         if (source instanceof Startable) {
             ((Startable) source).start();
@@ -91,6 +95,10 @@ public class CrossFadeProxySource extends ScaledSource {
 
     @Override
     protected void drawScaled(Graphics2D g, BufferedImage img, Dimension targetSize) {
+        if (img == lastImage) {
+            duplicates.addValue(1);
+        }
+        lastImage = img;
         long startTime = System.nanoTime();
         ImageUtils.drawAspectScaled(g, img, targetSize);
         if (fadeIntoSource != null) {
@@ -115,5 +123,9 @@ public class CrossFadeProxySource extends ScaledSource {
 
     public double getFps() {
         return stats.getRate();
+    }
+    
+    public void reportDuplicates() {
+        duplicates.report("Duplicate frames entering cross fade proxy");
     }
 }

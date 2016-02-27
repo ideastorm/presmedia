@@ -36,8 +36,9 @@ public class Stats {
 
     public void addValue(long value) {
         timestamps.offer(System.currentTimeMillis());
-        if (timestamps.size() > 30)
+        if (timestamps.size() > 30) {
             timestamps.poll();
+        }
         if (value < min) {
             min = value;
         }
@@ -65,23 +66,29 @@ public class Stats {
     }
 
     public long getAverage() {
-        if (count == 0)
+        if (count == 0) {
             return 0;
+        }
         return sum / count;
     }
-    
+
     public double getRate() {
-        if (timestamps.isEmpty())
+        if (timestamps.isEmpty()) {
             return 0;
+        }
         long currentTime = System.currentTimeMillis();
         long totalTime = currentTime - timestamps.peek();
         return timestamps.size() / (totalTime * 0.001);
     }
-    
-    public void report(String title)
-    {
-        long saturationDuration = (long) (1_000_000_000 / getRate());
+
+    public void report(String title) {
+        report(title, 1);
+    }
+
+    public void report(String title, double saturationScalar) {
+        long saturationDuration = (long) (1_000_000_000 * saturationScalar / getRate());
         boolean saturated = saturationDuration <= getAverage();
         System.out.printf("%s:\n\tmin: %d\n\tmax: %d\n\tavg: %d\n\tcount: %d\n\trate: %01.2f\n\tsaturated: %s\n\tsaturation avg: %d\n", title, getMin(), getMax(), getAverage(), getCount(), getRate(), String.valueOf(saturated), saturationDuration);
+
     }
 }

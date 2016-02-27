@@ -112,10 +112,6 @@ public final class ImageUtils {
         }
     }
 
-    public static ScaledSource scaleSource(Supplier<BufferedImage> source) {
-        return new ScaledSource().setSource(source);
-    }
-
     public static boolean needsScaling(BufferedImage img, Dimension targetSize) {
         return img.getWidth() != targetSize.getWidth() || img.getHeight() != targetSize.getHeight();
     }

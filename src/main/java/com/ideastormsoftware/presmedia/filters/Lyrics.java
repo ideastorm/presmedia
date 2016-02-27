@@ -60,9 +60,12 @@ public class Lyrics implements ImageOverlay {
         if (targetSize.width * 3 > targetSize.height * 4) {
             w = targetSize.height * 4 / 3;
         }
-        int shadowWidth = w * 9 / 10;
+        int aspectOffset = (targetSize.width - w) / 2;
+        int offset = w/10; 
+        
+        int shadowWidth = w - offset;
         w = w * 8 / 10;
-        int offset = (targetSize.width - w) / 2;
+       
         float estimatedCharacterHeight = w / 40 * 2.5f;
         int totalHeight = (int) (estimatedCharacterHeight * 3.2f);
         int vOffset = (int) (targetSize.height - totalHeight);
@@ -71,7 +74,7 @@ public class Lyrics implements ImageOverlay {
         font = font.deriveFont(estimatedCharacterHeight * 72 / 96);
 
         graphics.setColor(new Color(0, 0, 0, 127));
-        graphics.fillRect(offset / 2, vOffset - offset / 2, shadowWidth, totalHeight + offset / 2);
+        graphics.fillRect(aspectOffset + offset / 2, vOffset - offset / 2, shadowWidth, totalHeight + offset / 2);
         BufferedImage text = new BufferedImage(w, totalHeight, BufferedImage.TYPE_4BYTE_ABGR);
         Graphics2D t = text.createGraphics();
         t.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
@@ -85,7 +88,7 @@ public class Lyrics implements ImageOverlay {
             t.drawString(lines.get(i), 0, lineOffset);
             lineOffset += estimatedCharacterHeight;
         }
-        graphics.drawImage(text, offset, vOffset - offset / 4, null);
+        graphics.drawImage(text, aspectOffset + offset, vOffset - offset / 4, null);
     }
 
     public String getTitle() {

@@ -26,4 +26,5 @@ public class Frame {
     public int sampleRate;
     public int audioChannels;
     public long timestamp;
+    public long duration;
 }
