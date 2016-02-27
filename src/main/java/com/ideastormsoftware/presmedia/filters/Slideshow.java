@@ -66,8 +66,8 @@ public class Slideshow implements ImageOverlay {
                 }
             }
         }
-        float fadeDelay = perSlideDelay * 0.2f;
-        float alpha = (now - lastTransition) / fadeDelay;
+        float fadeDelay = Math.min(perSlideDelay * 0.2f, 5_000);
+        float alpha = (float) Math.sin(Math.PI/2 * (now - lastTransition) / fadeDelay); 
 
         BufferedImage compositeImage = img;
 
