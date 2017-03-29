@@ -33,11 +33,11 @@ public final class ImageUtils {
         method = newMethod;
     }
 
-    public static BufferedImage copy(BufferedImage img) {
-        BufferedImage copy = new BufferedImage(img.getWidth(), img.getHeight(), img.getType());
-        copy.getGraphics().drawImage(img, 0, 0, null);
-        return copy;
-    }
+//    public static BufferedImage copy(BufferedImage img) {
+//        BufferedImage copy = new BufferedImage(img.getWidth(), img.getHeight(), img.getType());
+//        copy.getGraphics().drawImage(img, 0, 0, null);
+//        return copy;
+//    }
 
 //    private static BufferedImage toABGR(BufferedImage image) {
 //        if (image.getType() == BufferedImage.TYPE_4BYTE_ABGR) {
