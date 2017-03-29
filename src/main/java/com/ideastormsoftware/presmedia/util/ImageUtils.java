@@ -116,11 +116,21 @@ public final class ImageUtils {
         }
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, qualityHint);
         g.setColor(Color.black);
-        g.fillRect(0, 0, width, height);
         if (img != null) {
             Dimension scaledSize = aspectScaledSize(img.getWidth(), img.getHeight(), width, height);
             Point offset = new Point((width - (int) scaledSize.width) / 2, (height - (int) scaledSize.height) / 2);
+            if (offset.x == 0) {
+                //need horizontal bars
+                g.fillRect(0, 0, width, offset.y);
+                g.fillRect(0, height - offset.y, width, offset.y);
+            } else {
+                //need vertical bars
+                g.fillRect(0,0, offset.x, height);
+                g.fillRect(width - offset.x, 0, offset.x, height);
+            }
             g.drawImage(img, offset.x, offset.y, (int) scaledSize.width, (int) scaledSize.height, null);
+        } else {
+            g.fillRect(0, 0, width, height);
         }
     }
 
