@@ -39,23 +39,23 @@ public final class ImageUtils {
         return copy;
     }
 
-    private static BufferedImage toABGR(BufferedImage image) {
-        if (image.getType() == BufferedImage.TYPE_4BYTE_ABGR) {
-            return image;
-        }
-        BufferedImage workImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_4BYTE_ABGR);
-        workImage.getGraphics().drawImage(image, 0, 0, null);
-        return workImage;
-    }
-
-    private static BufferedImage toByteGrayscale(BufferedImage image) {
-        if (image.getType() == BufferedImage.TYPE_BYTE_GRAY) {
-            return image;
-        }
-        BufferedImage workImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
-        workImage.getGraphics().drawImage(image, 0, 0, null);
-        return workImage;
-    }
+//    private static BufferedImage toABGR(BufferedImage image) {
+//        if (image.getType() == BufferedImage.TYPE_4BYTE_ABGR) {
+//            return image;
+//        }
+//        BufferedImage workImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_4BYTE_ABGR);
+//        workImage.getGraphics().drawImage(image, 0, 0, null);
+//        return workImage;
+//    }
+//
+//    private static BufferedImage toByteGrayscale(BufferedImage image) {
+//        if (image.getType() == BufferedImage.TYPE_BYTE_GRAY) {
+//            return image;
+//        }
+//        BufferedImage workImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
+//        workImage.getGraphics().drawImage(image, 0, 0, null);
+//        return workImage;
+//    }
 
     public static Dimension aspectScaledSize(int sourceWidth, int sourceHeight, int destWidth, int destHeight) {
         double sourceRatio = 1.0 * sourceHeight / sourceWidth;
@@ -79,12 +79,12 @@ public final class ImageUtils {
     }
 
     public static BufferedImage emptyImage() {
-        return new BufferedImage(320, 240, BufferedImage.TYPE_4BYTE_ABGR);
+        return new BufferedImage(320, 240, BufferedImage.TYPE_INT_RGB);
     }
 
     public static BufferedImage emptyImage(Dimension size) {
         size = new Dimension(size.width > 0 ? size.width : 1, size.height > 0 ? size.height : 1);
-        return new BufferedImage(size.width, size.height, BufferedImage.TYPE_4BYTE_ABGR);
+        return new BufferedImage(size.width, size.height, BufferedImage.TYPE_INT_RGB);
     }
 
     public static BufferedImage copyAspectScaled(BufferedImage img, Dimension size) {
@@ -102,7 +102,19 @@ public final class ImageUtils {
     }
 
     public static void drawAspectScaled(Graphics2D g, BufferedImage img, int width, int height) {
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        Object qualityHint;
+        switch (method) {
+            case SPEED:
+                qualityHint = RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR;
+                break;
+            case ULTRA_QUALITY:
+                qualityHint = RenderingHints.VALUE_INTERPOLATION_BICUBIC;
+                break;
+            default:
+                qualityHint = RenderingHints.VALUE_INTERPOLATION_BILINEAR;
+                break;
+        }
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, qualityHint);
         g.setColor(Color.black);
         g.fillRect(0, 0, width, height);
         if (img != null) {

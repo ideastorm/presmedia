@@ -34,7 +34,7 @@ public class Name implements ImageOverlay {
 
         graphics.setColor(new Color(0, 0, 0, 127));
         graphics.fillRect(aspectOffset + offset / 2, vOffset - offset / 2, shadowWidth, totalHeight + offset / 2);
-        BufferedImage text = new BufferedImage(w, totalHeight, BufferedImage.TYPE_4BYTE_ABGR);
+        BufferedImage text = new BufferedImage(w, totalHeight, BufferedImage.TYPE_INT_ARGB);
         Graphics2D t = text.createGraphics();
         t.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         t.setFont(font);
