@@ -77,7 +77,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
     private FFmpegFrameGrabber ffmpeg;
 
     private final String sourceFile;
-    private volatile Optional<BufferedImage> currentImage = Optional.empty();
+    private volatile BufferedImage currentImage = null;
     private final Stats fpsStats = new Stats();
 
     private static void log(String format, Object... params) {
@@ -110,7 +110,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
 
     @Override
     public Optional<BufferedImage> get() {
-        return currentImage;
+        return Optional.ofNullable(currentImage);
     }
 
     @Override
@@ -132,13 +132,13 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
         }
         boolean pauseState = paused;
         setPaused(true);
-        delay(5, TimeUnit.MILLISECONDS);
+        delay(5, TimeUnit.MILLISECONDS); //give time for the pause to take effect
         ffmpeg.setTimestamp(position);
         frameQueueSize.set(0);
-        if (currentImage.isPresent()) {
-            imageBuffer.offer(currentImage.get());
+        if (currentImage != null) {
+            imageBuffer.offer(currentImage);
+            currentImage = null;
         }
-        currentImage = Optional.empty();
         while (!frames.isEmpty()) {
             imageBuffer.offer(frames.poll().data);
         }
@@ -252,13 +252,15 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
         }
     }
 
-    private GrabberThread grabber;
+    private GrabberThread grabber = null;
 
     private void openSource() {
-        log("initializing new processing thread");
-        grabber = new GrabberThread();
-        grabber.start();
-        log("processing thread %s started", grabber.getName());
+        if (grabber == null) {
+            log("initializing new processing thread");
+            grabber = new GrabberThread();
+            grabber.start();
+            log("processing thread %s started", grabber.getName());
+        }
     }
 
     private void closeSource() {
@@ -381,7 +383,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                                     }
                                 } catch (Exception e) {
                                     e.printStackTrace();
-                                    currentImage = Optional.empty();
+                                    currentImage = ImageUtils.emptyImage();
                                 }
                             }
                         }
@@ -430,7 +432,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
         if (minimumFrames > 0) {
             DataFrame<BufferedImage> frame = frames.peek();
             if (frame != null) {
-                currentImage = Optional.of(frame.data);
+                currentImage = frame.data;
             }
         }
     }
@@ -468,10 +470,10 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                         if (frame != null) {
                             frameQueueSize.decrementAndGet();
                             BufferedImage image = frame.data;
-                            if (currentImage.isPresent()) {
-                                imageBuffer.offer(currentImage.get()); //recycle it!
+                            if (currentImage != null) {
+                                imageBuffer.offer(currentImage); //recycle it!
                             }
-                            currentImage = Optional.of(image);
+                            currentImage = image;
                             if (minimumSamples > 0) {
                                 long mediaPosition = getMediaPosition();
                                 long delta = frame.timestamp - mediaPosition;

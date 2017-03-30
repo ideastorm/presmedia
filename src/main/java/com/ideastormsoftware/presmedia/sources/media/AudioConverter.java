@@ -31,7 +31,7 @@ public abstract class AudioConverter {
         if (buffer.hasArray()) {
             bufferData = buffer.array();
         } else {
-            bufferData = new double[buffer.limit()];
+            bufferData = new double[buffer.remaining()];
             buffer.get(bufferData);
         }
         ShortBuffer shortBuffer = ShortBuffer.allocate(bufferData.length);
@@ -47,7 +47,7 @@ public abstract class AudioConverter {
         if (buffer.hasArray()) {
             bufferData = buffer.array();
         } else {
-            bufferData = new float[buffer.limit()];
+            bufferData = new float[buffer.remaining()];
             buffer.get(bufferData);
         }
         ShortBuffer shortBuffer = ShortBuffer.allocate(bufferData.length);
@@ -63,7 +63,7 @@ public abstract class AudioConverter {
         if (buffer.hasArray()) {
             bufferData = buffer.array();
         } else {
-            bufferData = new int[buffer.limit()];
+            bufferData = new int[buffer.remaining()];
             buffer.get(bufferData);
         }
         ShortBuffer shortBuffer = ShortBuffer.allocate(bufferData.length);

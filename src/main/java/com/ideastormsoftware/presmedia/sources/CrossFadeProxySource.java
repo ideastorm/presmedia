@@ -102,9 +102,6 @@ public class CrossFadeProxySource extends ScaledSource {
         }
         lastImage = img;
         long startTime = System.nanoTime();
-        if (!img.isPresent()) {
-            log("no source image");
-        }
         if (getSource().getClass().isAnnotationPresent(AspectAgnostic.class)) {
             ImageUtils.drawIgnoringAspect(g, img, targetSize, quality);
         } else
