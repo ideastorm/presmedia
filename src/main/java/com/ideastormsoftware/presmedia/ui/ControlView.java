@@ -22,7 +22,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.imageio.ImageIO;
 import javax.swing.DefaultListModel;
+import javax.swing.JColorChooser;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.border.LineBorder;
@@ -44,6 +49,8 @@ public class ControlView extends javax.swing.JFrame {
         }
     }
 
+    private Supplier<Optional<BufferedImage>> backgroundSource = new ColorSource(Color.black);
+    private Color backgroundColor = Color.black;
     private final CrossFadeProxySource source;
     private final Projector projector;
     private Camera selectedCamera;
@@ -82,7 +89,7 @@ public class ControlView extends javax.swing.JFrame {
      */
     public ControlView() {
         initComponents();
-        source = new CrossFadeProxySource().setSourceNoFade(new ColorSource());
+        source = new CrossFadeProxySource().setSourceNoFade(backgroundSource);
         projector = new Projector(source);
         projector.setFrameCallback((fps) -> {
             projectorFps.setText(String.format("Projector FPS: %01.1f", fps));
@@ -201,6 +208,11 @@ public class ControlView extends javax.swing.JFrame {
         seekRev = new javax.swing.JButton();
         togglePause = new javax.swing.JButton();
         seekFwd = new javax.swing.JButton();
+        jPanel5 = new javax.swing.JPanel();
+        colorSelector = new javax.swing.JButton();
+        imageBgSelector = new javax.swing.JButton();
+        bgImagePath = new javax.swing.JTextField();
+        jLabel11 = new javax.swing.JLabel();
 
         setTitle("Presmedia Control");
         setMinimumSize(new java.awt.Dimension(924, 633));
@@ -679,6 +691,45 @@ public class ControlView extends javax.swing.JFrame {
                         .addComponent(togglePause))))
         );
 
+        colorSelector.setText("Select Color");
+        colorSelector.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                colorSelectorActionPerformed(evt);
+            }
+        });
+
+        imageBgSelector.setText("Select Image");
+        imageBgSelector.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                imageBgSelectorActionPerformed(evt);
+            }
+        });
+
+        bgImagePath.setToolTipText("");
+
+        javax.swing.GroupLayout jPanel5Layout = new javax.swing.GroupLayout(jPanel5);
+        jPanel5.setLayout(jPanel5Layout);
+        jPanel5Layout.setHorizontalGroup(
+            jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel5Layout.createSequentialGroup()
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(colorSelector)
+                    .addComponent(imageBgSelector)
+                    .addComponent(bgImagePath, javax.swing.GroupLayout.PREFERRED_SIZE, 162, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(0, 0, Short.MAX_VALUE))
+        );
+        jPanel5Layout.setVerticalGroup(
+            jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel5Layout.createSequentialGroup()
+                .addComponent(colorSelector)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(imageBgSelector)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(bgImagePath, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+        );
+
+        jLabel11.setText("Background");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -687,13 +738,16 @@ public class ControlView extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                        .addComponent(configureCameras, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addGroup(layout.createSequentialGroup()
-                            .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 144, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addGap(0, 0, Short.MAX_VALUE))
-                        .addComponent(displayCamera, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 162, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(deinterlaceCamera))
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(configureCameras, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 144, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(0, 0, Short.MAX_VALUE))
+                            .addComponent(displayCamera, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addComponent(jScrollPane3)
+                        .addComponent(deinterlaceCamera)
+                        .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(jLabel11))
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addGroup(layout.createSequentialGroup()
                         .addGap(10, 10, 10)
@@ -735,18 +789,23 @@ public class ControlView extends javax.swing.JFrame {
                     .addGroup(layout.createSequentialGroup()
                         .addContainerGap()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(jLabel1)
                             .addComponent(jLabel3)
-                            .addComponent(jLabel4))
+                            .addComponent(jLabel4)
+                            .addComponent(jLabel11))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                             .addGroup(layout.createSequentialGroup()
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jScrollPane3)
-                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                    .addGroup(layout.createSequentialGroup()
                                         .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                         .addGap(8, 8, 8)
-                                        .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                        .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addGroup(layout.createSequentialGroup()
+                                        .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                        .addComponent(jLabel1)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(jScrollPane3)))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                                     .addComponent(loopMedia)
@@ -1074,6 +1133,27 @@ public class ControlView extends javax.swing.JFrame {
         displayName.setSelected(false);
     }//GEN-LAST:event_nameListValueChanged
 
+    private void colorSelectorActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_colorSelectorActionPerformed
+        backgroundColor = JColorChooser.showDialog(rootPane, "Select a background color", backgroundColor);
+        backgroundSource = new ColorSource(backgroundColor);
+        updatePreview();
+    }//GEN-LAST:event_colorSelectorActionPerformed
+
+    private void imageBgSelectorActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_imageBgSelectorActionPerformed
+        JFileChooser chooser = new JFileChooser();
+        int result = chooser.showDialog(rootPane, "Select");
+        if (result == JFileChooser.APPROVE_OPTION) {
+            try {
+                bgImagePath.setText(chooser.getSelectedFile().getPath());
+                BufferedImage image = ImageIO.read(chooser.getSelectedFile());
+                backgroundSource = () -> Optional.of(image);
+                updatePreview();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }//GEN-LAST:event_imageBgSelectorActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -1118,6 +1198,8 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JButton addSong;
     private javax.swing.JButton advanceLyrics;
     private javax.swing.JProgressBar audioBufferFill;
+    private javax.swing.JTextField bgImagePath;
+    private javax.swing.JButton colorSelector;
     private javax.swing.JButton configureCameras;
     private javax.swing.JProgressBar cpuGraph;
     private javax.swing.JLabel cpuLabel;
@@ -1129,9 +1211,11 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JButton editName;
     private javax.swing.JButton editSlideshow;
     private javax.swing.JButton editSong;
+    private javax.swing.JButton imageBgSelector;
     private javax.swing.JPanel inputPreviews;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
+    private javax.swing.JLabel jLabel11;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
@@ -1144,6 +1228,7 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
+    private javax.swing.JPanel jPanel5;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
@@ -1201,7 +1286,7 @@ public class ControlView extends javax.swing.JFrame {
                         } catch (Exception ex) {
                             activeMedia = null;
                             ex.printStackTrace();
-                            source.setSource(new ColorSource());
+                            source.setSource(backgroundSource);
                         }
                     }
                 };
@@ -1214,12 +1299,12 @@ public class ControlView extends javax.swing.JFrame {
                 if (displayCamera.isSelected() && selectedCamera != null) {
                     source.setSource(selectedCamera);
                 } else {
-                    source.setSource(new ColorSource());
+                    source.setSource(backgroundSource);
                 }
             }
         } catch (Throwable e) {
             e.printStackTrace();
-            source.setSource(new ColorSource());
+            source.setSource(backgroundSource);
         }
     }
 

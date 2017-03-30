@@ -29,7 +29,7 @@ import org.imgscalr.Scalr;
  */
 public class ScaledSource {
 
-    public Supplier<Optional<BufferedImage>> source = new ColorSource();
+    private Supplier<Optional<BufferedImage>> source = new ColorSource();
 
     public ScaledSource setSource(Supplier<Optional<BufferedImage>> source) {
         if (source == null) {
@@ -38,10 +38,17 @@ public class ScaledSource {
         this.source = source;
         return this;
     }
+    
+    protected Supplier<Optional<BufferedImage>> getSource() {
+        return source;
+    }
 
     public void scaleInto(Graphics2D graphics, Dimension targetSize, Optional<Scalr.Method> quality) {
         if (graphics == null) {
             throw new IllegalArgumentException("graphics is null");
+        }
+        if (source == null) {
+            throw new IllegalArgumentException("source is null");
         }
         if (targetSize == null) {
             throw new IllegalArgumentException("targetSize is null");

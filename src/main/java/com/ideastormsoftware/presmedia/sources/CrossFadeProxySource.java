@@ -52,17 +52,17 @@ public class CrossFadeProxySource extends ScaledSource {
 
     @Override
     public ScaledSource setSource(Supplier<Optional<BufferedImage>> source) {
-        reportDuplicates();
+//        reportDuplicates();
         duplicates.reset();
         stats.reset();
         if (source instanceof Startable) {
             ((Startable) source).start();
         }
         if (fadeIntoSource != null) {
-            if (this.source instanceof CleanCloseable) {
-                ((CleanCloseable) this.source).close();
+            if (getSource() instanceof CleanCloseable) {
+                ((CleanCloseable) getSource()).close();
             }
-            this.source = fadeIntoSource;
+            super.setSource(fadeIntoSource);
         }
         setFadeSourceInternal(source);
         return this;
@@ -72,10 +72,10 @@ public class CrossFadeProxySource extends ScaledSource {
         if (source instanceof Startable) {
             ((Startable) source).start();
         }
-        if (this.source instanceof CleanCloseable) {
-            ((CleanCloseable) this.source).close();
+        if (getSource() instanceof CleanCloseable) {
+            ((CleanCloseable) getSource()).close();
         }
-        this.source = source;
+        setSource(source);
         fadeIntoSource = null;
         return this;
     }
@@ -102,20 +102,23 @@ public class CrossFadeProxySource extends ScaledSource {
         }
         lastImage = img;
         long startTime = System.nanoTime();
-        ImageUtils.drawAspectScaled(g, img, targetSize);
+        if (!img.isPresent()) {
+            log("no source image");
+        }
+        ImageUtils.drawAspectScaled(g, img, targetSize, quality);
         if (fadeIntoSource != null) {
             Optional<BufferedImage> overlayImage = ImageUtils.copyAspectScaled(fadeIntoSource.get(), targetSize, quality);
             float alpha = findAlpha();
             if (alpha >= 1) {
                 alpha = 1;
-                if (source instanceof CleanCloseable) {
-                    ((CleanCloseable) source).close();
+                if (getSource() instanceof CleanCloseable) {
+                    ((CleanCloseable) getSource()).close();
                 }
-                source = fadeIntoSource;
+                setSource(fadeIntoSource);
                 fadeIntoSource = null;
             }
             g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-            ImageUtils.drawAspectScaled(g, overlayImage, targetSize);
+            ImageUtils.drawAspectScaled(g, overlayImage, targetSize, quality);
         }
         for (ImageOverlay overlay : postScaleOverlays) {
             overlay.apply(g, targetSize);
@@ -126,7 +129,7 @@ public class CrossFadeProxySource extends ScaledSource {
     public double getFps() {
         return stats.getRate();
     }
-    
+
     public void reportDuplicates() {
         duplicates.report("Duplicate frames entering cross fade proxy");
     }
