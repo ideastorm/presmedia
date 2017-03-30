@@ -34,6 +34,9 @@ public class Lyrics implements ImageOverlay {
             return;
         }
         if (index < lines.size() - 3) {
+            if (System.currentTimeMillis() - transitionStartTs < 1500) {
+                index++;
+            }
             transitionStartTs = System.currentTimeMillis();
         }
     }
@@ -54,18 +57,18 @@ public class Lyrics implements ImageOverlay {
     }
 
     @Override
-    public void apply(Graphics2D graphics, Dimension targetSize){
+    public void apply(Graphics2D graphics, Dimension targetSize) {
         //Start by finding ow wide we can be to fit in a 4:3 aspect ratio screen
         int w = targetSize.width;
         if (targetSize.width * 3 > targetSize.height * 4) {
             w = targetSize.height * 4 / 3;
         }
         int aspectOffset = (targetSize.width - w) / 2;
-        int offset = w/10; 
-        
+        int offset = w / 10;
+
         int shadowWidth = w - offset;
         w = w * 8 / 10;
-       
+
         float estimatedCharacterHeight = w / 40 * 2.5f;
         int totalHeight = (int) (estimatedCharacterHeight * 3.2f);
         int vOffset = (int) (targetSize.height - totalHeight);
