@@ -106,8 +106,8 @@ public class ControlView extends javax.swing.JFrame {
             } catch (Throwable ex) {
             }
         });
-//        RenderPane controlPreview = new RenderPane(source, source::getFps);
-//        outputContainer.add(controlPreview);
+        RenderPane controlPreview = new RenderPane(source, source::getFps);
+        outputContainer.add(controlPreview);
         RenderPane mediaPreview = new RenderPane(mediaSource);
         mediaPreviewContainer.add(mediaPreview);
         mediaPreview.setSize(201, 134);

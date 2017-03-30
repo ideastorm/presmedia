@@ -43,13 +43,10 @@ public class ScaledSource {
         if (graphics == null) {
             throw new IllegalArgumentException("graphics is null");
         }
-        if (source == null) {
-            throw new IllegalArgumentException("source is null");
-        }
         if (targetSize == null) {
             throw new IllegalArgumentException("targetSize is null");
         }
-        drawScaled(graphics, source.get(), targetSize, quality);
+        drawScaled(graphics, source != null ? source.get() : Optional.empty(), targetSize, quality);
     }
 
     protected void drawScaled(Graphics2D graphics, Optional<BufferedImage> image, Dimension targetSize, Optional<Scalr.Method> quality) {
