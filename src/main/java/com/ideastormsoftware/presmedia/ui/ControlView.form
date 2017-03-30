@@ -709,7 +709,7 @@
               </StringArray>
             </Property>
             <Property name="selectedItem" type="java.lang.Object" editor="org.netbeans.modules.form.RADConnectionPropertyEditor">
-              <Connection code="&quot;BALANCED&quot;" type="code"/>
+              <Connection code="&quot;SPEED&quot;" type="code"/>
             </Property>
           </Properties>
           <Events>

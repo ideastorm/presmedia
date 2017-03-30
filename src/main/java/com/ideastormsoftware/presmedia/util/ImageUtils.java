@@ -26,7 +26,7 @@ import org.imgscalr.Scalr;
 
 public final class ImageUtils {
 
-    private static Scalr.Method method = Scalr.Method.BALANCED; //.Method.valueOf(System.getProperty("scalr.method", "BALANCED"));
+    private static Scalr.Method method = Scalr.Method.SPEED; //.Method.valueOf(System.getProperty("scalr.method", "BALANCED"));
 
     public static void setScalingMethod(Scalr.Method newMethod) {
         method = newMethod;

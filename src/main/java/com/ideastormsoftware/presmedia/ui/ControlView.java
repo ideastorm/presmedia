@@ -525,7 +525,7 @@ public class ControlView extends javax.swing.JFrame {
         jLabel8.setText("Image Scaling Method");
 
         scalingMethodPicker.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "SPEED", "BALANCED", "AUTOMATIC", "QUALITY", "ULTRA_QUALITY" }));
-        scalingMethodPicker.setSelectedItem("BALANCED");
+        scalingMethodPicker.setSelectedItem("SPEED");
         scalingMethodPicker.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 scalingMethodPickerActionPerformed(evt);
