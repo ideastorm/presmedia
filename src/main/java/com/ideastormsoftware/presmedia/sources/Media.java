@@ -84,10 +84,10 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
         System.out.println(String.format("%d %s - %s", System.currentTimeMillis(),
                 Thread.currentThread().getName(), String.format(format, params)));
     }
-    private long mediaPosition;
+    private volatile long mediaPosition;
     private long mediaDuration;
     private double frameRate;
-    private long videoPosition;
+    private volatile long videoPosition;
 
     public Media(String sourceFile, Runnable callback) {
         this.sourceFile = sourceFile;
@@ -484,7 +484,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                                     targetTime += delta / 2;
                                 } else if (slow) {
                                     slowVideo.addValue(delta);
-                                    targetTime += delta / 4;
+                                    targetTime += delta / 4; //delta is negative here
                                 } else {
                                     closeMatch.addValue(delta);
                                     targetTime = lastFrame + interframe;
@@ -530,19 +530,36 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
 
         @Override
         public void run() {
+            Thread updateThread = null;
             while (!canceled && !interrupted()) {
                 if (paused) {
                     delay(2);
+                    if (updateThread != null) {
+                        updateThread.interrupt();
+                        updateThread = null;
+                    }
                 } else {
                     DataFrame<byte[]> frame = samples.poll();
                     if (frame != null) {
+                        if (updateThread == null) {
+                            final long offset = frame.timestamp - mLine.getMicrosecondPosition();
+                            updateThread = new Thread(() -> {
+                                try {
+                                    while (!interrupted()) {
+                                        setMediaPosition(mLine.getMicrosecondPosition() + offset);
+                                        sleep(1);
+                                    }
+                                } catch (InterruptedException e) {
+                                }
+                            });
+                            updateThread.start();
+                        }
                         sampleQueueSize.decrementAndGet();
                         byte[] buffer = frame.data;
 
                         if (mLine != null) {
                             mLine.write(buffer, 0, buffer.length);
                         }
-                        setMediaPosition(frame.timestamp + frame.duration);
                     }
                 }
             }
