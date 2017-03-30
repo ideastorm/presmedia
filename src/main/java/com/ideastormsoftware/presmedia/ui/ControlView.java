@@ -19,6 +19,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import javax.swing.DefaultListModel;
@@ -68,11 +69,11 @@ public class ControlView extends javax.swing.JFrame {
         }
 
         @Override
-        public BufferedImage get() {
+        public Optional<BufferedImage> get() {
             if (activeMedia != null) {
                 return activeMedia.get();
             }
-            return ImageUtils.emptyImage();
+            return Optional.empty();
         }
     };
 

@@ -15,14 +15,13 @@
  */
 package com.ideastormsoftware.presmedia.util;
 
-import com.ideastormsoftware.presmedia.sources.ScaledSource;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
-import java.util.function.Supplier;
+import java.util.Optional;
 import org.imgscalr.Scalr;
 
 public final class ImageUtils {
@@ -87,21 +86,21 @@ public final class ImageUtils {
         return new BufferedImage(size.width, size.height, BufferedImage.TYPE_INT_RGB);
     }
 
-    public static BufferedImage copyAspectScaled(BufferedImage img, Dimension size) {
-        if (img == null) {
-            return emptyImage(size);
+    public static Optional<BufferedImage> copyAspectScaled(Optional<BufferedImage> img, Dimension size) {
+        if (!img.isPresent()) {
+            return Optional.empty();
         }
         if (size.width < 1 || size.height < 1) {
-            return emptyImage();
+            return Optional.empty();
         }
-        return Scalr.resize(img, method, size.width, size.height);
+        return Optional.of(Scalr.resize(img.get(), method, size.width, size.height));
     }
 
-    public static void drawAspectScaled(Graphics2D g, BufferedImage img, Dimension size) {
+    public static void drawAspectScaled(Graphics2D g, Optional<BufferedImage> img, Dimension size) {
         drawAspectScaled(g, img, size.width, size.height);
     }
 
-    public static void drawAspectScaled(Graphics2D g, BufferedImage img, int width, int height) {
+    public static void drawAspectScaled(Graphics2D g, Optional<BufferedImage> img, int width, int height) {
         Object qualityHint;
         switch (method) {
             case SPEED:
@@ -116,8 +115,9 @@ public final class ImageUtils {
         }
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, qualityHint);
         g.setColor(Color.black);
-        if (img != null) {
-            Dimension scaledSize = aspectScaledSize(img.getWidth(), img.getHeight(), width, height);
+        if (img.isPresent()) {
+            BufferedImage image = img.get();
+            Dimension scaledSize = aspectScaledSize(image.getWidth(), image.getHeight(), width, height);
             Point offset = new Point((width - (int) scaledSize.width) / 2, (height - (int) scaledSize.height) / 2);
             if (offset.x == 0) {
                 //need horizontal bars
@@ -128,7 +128,7 @@ public final class ImageUtils {
                 g.fillRect(0,0, offset.x, height);
                 g.fillRect(width - offset.x, 0, offset.x, height);
             }
-            g.drawImage(img, offset.x, offset.y, (int) scaledSize.width, (int) scaledSize.height, null);
+            g.drawImage(image, offset.x, offset.y, (int) scaledSize.width, (int) scaledSize.height, null);
         } else {
             g.fillRect(0, 0, width, height);
         }

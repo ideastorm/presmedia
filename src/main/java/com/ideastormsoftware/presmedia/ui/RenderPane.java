@@ -24,6 +24,7 @@ import java.awt.HeadlessException;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
+import java.util.Optional;
 import java.util.function.Supplier;
 import javax.swing.JPanel;
 import javax.swing.border.Border;
@@ -32,7 +33,7 @@ public class RenderPane extends JPanel {
 
     private final ImagePainter painter;
     
-    public RenderPane(Supplier<BufferedImage> imgSupplier, Supplier<Double> fpsSupplier)
+    public RenderPane(Supplier<Optional<BufferedImage>> imgSupplier, Supplier<Double> fpsSupplier)
     {
         this(new ScaledSource().setSource(imgSupplier), fpsSupplier);
     }

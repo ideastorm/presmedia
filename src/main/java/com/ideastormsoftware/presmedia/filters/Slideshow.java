@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Optional;
 import javax.imageio.ImageIO;
 
 public class Slideshow implements ImageOverlay {
@@ -21,8 +22,8 @@ public class Slideshow implements ImageOverlay {
     private int perSlideDelay = 5000;
     private transient int index = -1;
     private transient long lastTransition = 0;
-    private transient BufferedImage lastImage = ImageUtils.emptyImage();
-    private transient BufferedImage fadeImage;
+    private transient Optional<BufferedImage> lastImage = Optional.empty();
+    private transient Optional<BufferedImage> fadeImage = Optional.empty();
     private transient final List<File> unseenImages = new ArrayList<>();
 
     private void log(String format, Object... params) {
@@ -47,19 +48,18 @@ public class Slideshow implements ImageOverlay {
 
     @Override
     public void apply(Graphics2D graphics, Dimension targetSize) {
-        BufferedImage img = ImageUtils.emptyImage(targetSize);
         long now = System.currentTimeMillis();
         //if it's time to transition, this will become true
         //  lastTransition is set to now to break out of the loop once we've
         //  got a new file to transition to.
         while (now - lastTransition > perSlideDelay) {
             if (files == null || files.isEmpty()) {
-                lastImage = ImageUtils.emptyImage();
+                lastImage = Optional.empty();
                 lastTransition = now;
             } else {
                 File nextFile = randomize ? pickRandomFile() : nextFile();
                 try {
-                    fadeImage = ImageIO.read(nextFile);
+                    fadeImage = Optional.of(ImageIO.read(nextFile));
                     lastTransition = now;
                 } catch (IOException ex) {
                     files.remove(nextFile);
@@ -69,7 +69,7 @@ public class Slideshow implements ImageOverlay {
         float fadeDelay = Math.min(perSlideDelay * 0.2f, 5_000);
         float alpha = (float) Math.sin(Math.PI/2 * (now - lastTransition) / fadeDelay); 
 
-        BufferedImage compositeImage = img;
+        Optional<BufferedImage> compositeImage = Optional.of(ImageUtils.emptyImage(targetSize));
 
         if (now - lastTransition > fadeDelay) {
             if (fadeImage != null) {
@@ -78,7 +78,7 @@ public class Slideshow implements ImageOverlay {
             }
             compositeImage = lastImage;
         } else {
-            Graphics2D g = compositeImage.createGraphics();
+            Graphics2D g = compositeImage.get().createGraphics();
             ImageUtils.drawAspectScaled(g, lastImage, targetSize);
             g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
             ImageUtils.drawAspectScaled(g, fadeImage, targetSize);

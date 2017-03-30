@@ -17,7 +17,6 @@ package com.ideastormsoftware.presmedia.sources;
 
 import com.ideastormsoftware.presmedia.filters.Deinterlace;
 import com.ideastormsoftware.presmedia.util.Stats;
-import com.ideastormsoftware.presmedia.util.ImageUtils;
 import de.humatic.dsj.DSCapture;
 import de.humatic.dsj.DSEnvironment;
 import de.humatic.dsj.DSFilterInfo;
@@ -29,6 +28,7 @@ import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -54,7 +54,7 @@ public class Camera implements ImageSource, PropertyChangeListener {
     private final DSFilterInfo deviceInfo;
     private final Stats captureStats = new Stats();
     private final DSCapture capture;
-    private BufferedImage currentImage = ImageUtils.emptyImage();
+    private Optional<BufferedImage> currentImage = Optional.empty();
     private boolean deinterlace;
 
     static {
@@ -144,7 +144,7 @@ public class Camera implements ImageSource, PropertyChangeListener {
     }
 
     @Override
-    public BufferedImage get() {
+    public Optional<BufferedImage> get() {
         return currentImage;
     }
 
@@ -160,7 +160,7 @@ public class Camera implements ImageSource, PropertyChangeListener {
             case DSFiltergraph.KF_NOTIFY:
             case DSFiltergraph.FRAME_NOTIFY:
                 long start = System.nanoTime();
-                this.currentImage = deinterlace? deinterlacer.filter(capture.getImage()):capture.getImage();
+                this.currentImage = Optional.of(deinterlace? deinterlacer.filter(capture.getImage()):capture.getImage());
                 captureStats.addValue(System.nanoTime() - start);
                 break;
             default:

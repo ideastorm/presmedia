@@ -19,10 +19,8 @@ import com.ideastormsoftware.presmedia.util.ImageUtils;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.util.concurrent.TimeUnit;
+import java.util.Optional;
 import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -30,9 +28,9 @@ import java.util.logging.Logger;
  */
 public class ScaledSource {
 
-    public Supplier<BufferedImage> source = new ColorSource();
+    public Supplier<Optional<BufferedImage>> source = new ColorSource();
 
-    public ScaledSource setSource(Supplier<BufferedImage> source) {
+    public ScaledSource setSource(Supplier<Optional<BufferedImage>> source) {
         if (source == null) {
             source = new ColorSource();
         }
@@ -53,7 +51,7 @@ public class ScaledSource {
         drawScaled(graphics, source.get(), targetSize);
     }
 
-    protected void drawScaled(Graphics2D graphics, BufferedImage image, Dimension targetSize) {
+    protected void drawScaled(Graphics2D graphics, Optional<BufferedImage> image, Dimension targetSize) {
         ImageUtils.drawAspectScaled(graphics, image, targetSize);
     }
 }

@@ -16,9 +16,10 @@
 package com.ideastormsoftware.presmedia.sources;
 
 import java.awt.image.BufferedImage;
+import java.util.Optional;
 import java.util.function.Supplier;
 
-public interface ImageSource extends Supplier<BufferedImage> {
+public interface ImageSource extends Supplier<Optional<BufferedImage>> {
 
     public double getFps();
 }

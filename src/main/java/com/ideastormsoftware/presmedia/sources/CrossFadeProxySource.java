@@ -24,16 +24,17 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 public class CrossFadeProxySource extends ScaledSource {
 
-    private Supplier<BufferedImage> fadeIntoSource;
+    private Supplier<Optional<BufferedImage>> fadeIntoSource;
     private static final double fadeDuration = 0.5;
     private long fadeStartTime;
     private final Stats stats = new Stats();
     private final List<ImageOverlay> postScaleOverlays = new ArrayList<>();
-    private BufferedImage lastImage = null;
+    private Optional<BufferedImage> lastImage = Optional.empty();
     private final Stats duplicates = new Stats();
 
     public void appendOverlay(ImageOverlay overlay) {
@@ -49,7 +50,7 @@ public class CrossFadeProxySource extends ScaledSource {
     }
 
     @Override
-    public ScaledSource setSource(Supplier<BufferedImage> source) {
+    public ScaledSource setSource(Supplier<Optional<BufferedImage>> source) {
         reportDuplicates();
         duplicates.reset();
         stats.reset();
@@ -66,7 +67,7 @@ public class CrossFadeProxySource extends ScaledSource {
         return this;
     }
 
-    public CrossFadeProxySource setSourceNoFade(Supplier<BufferedImage> source) {
+    public CrossFadeProxySource setSourceNoFade(Supplier<Optional<BufferedImage>> source) {
         if (source instanceof Startable) {
             ((Startable) source).start();
         }
@@ -78,7 +79,7 @@ public class CrossFadeProxySource extends ScaledSource {
         return this;
     }
 
-    private void setFadeSourceInternal(Supplier<BufferedImage> source) {
+    private void setFadeSourceInternal(Supplier<Optional<BufferedImage>> source) {
         fadeIntoSource = source;
         fadeStartTime = System.nanoTime();
     }
@@ -94,7 +95,7 @@ public class CrossFadeProxySource extends ScaledSource {
     }
 
     @Override
-    protected void drawScaled(Graphics2D g, BufferedImage img, Dimension targetSize) {
+    protected void drawScaled(Graphics2D g, Optional<BufferedImage> img, Dimension targetSize) {
         if (img == lastImage) {
             duplicates.addValue(1);
         }
@@ -102,7 +103,7 @@ public class CrossFadeProxySource extends ScaledSource {
         long startTime = System.nanoTime();
         ImageUtils.drawAspectScaled(g, img, targetSize);
         if (fadeIntoSource != null) {
-            BufferedImage overlayImage = ImageUtils.copyAspectScaled(fadeIntoSource.get(), targetSize);
+            Optional<BufferedImage> overlayImage = ImageUtils.copyAspectScaled(fadeIntoSource.get(), targetSize);
             float alpha = findAlpha();
             if (alpha >= 1) {
                 alpha = 1;

@@ -34,6 +34,7 @@ import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
@@ -76,7 +77,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
     private FFmpegFrameGrabber ffmpeg;
 
     private final String sourceFile;
-    private volatile BufferedImage currentImage = null;
+    private volatile Optional<BufferedImage> currentImage = Optional.empty();
     private final Stats fpsStats = new Stats();
 
     private static void log(String format, Object... params) {
@@ -108,10 +109,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
     }
 
     @Override
-    public BufferedImage get() {
-        if (currentImage == null) {
-            return ImageUtils.emptyImage();
-        }
+    public Optional<BufferedImage> get() {
         return currentImage;
     }
 
@@ -137,8 +135,10 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
         delay(5, TimeUnit.MILLISECONDS);
         ffmpeg.setTimestamp(position);
         frameQueueSize.set(0);
-        imageBuffer.offer(currentImage);
-        currentImage = null;
+        if (currentImage.isPresent()) {
+            imageBuffer.offer(currentImage.get());
+        }
+        currentImage = Optional.empty();
         while (!frames.isEmpty()) {
             imageBuffer.offer(frames.poll().data);
         }
@@ -299,7 +299,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
     public double getFps() {
         return fpsStats.getRate();
     }
-    
+
     public long getVideoPosition() {
         return videoPosition;
     }
@@ -381,7 +381,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                                     }
                                 } catch (Exception e) {
                                     e.printStackTrace();
-                                    currentImage = ImageUtils.emptyImage();
+                                    currentImage = Optional.empty();
                                 }
                             }
                         }
@@ -430,7 +430,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
         if (minimumFrames > 0) {
             DataFrame<BufferedImage> frame = frames.peek();
             if (frame != null) {
-                currentImage = frame.data;
+                currentImage = Optional.of(frame.data);
             }
         }
     }
@@ -468,10 +468,10 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                         if (frame != null) {
                             frameQueueSize.decrementAndGet();
                             BufferedImage image = frame.data;
-                            if (currentImage != null) {
-                                imageBuffer.offer(currentImage); //recycle it!
+                            if (currentImage.isPresent()) {
+                                imageBuffer.offer(currentImage.get()); //recycle it!
                             }
-                            currentImage = image;
+                            currentImage = Optional.of(image);
                             if (minimumSamples > 0) {
                                 long mediaPosition = getMediaPosition();
                                 long delta = frame.timestamp - mediaPosition;
@@ -494,7 +494,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                         }
                         long predelayMicros = microTime();
                         if (predelayMicros < targetTime) {
-                            long delay = Math.min((long) (targetTime - predelayMicros), interframe*5);
+                            long delay = Math.min((long) (targetTime - predelayMicros), interframe * 5);
                             fpsStats.addValue(delay);
                             TimeUnit.MICROSECONDS.sleep(delay);
                         } else {
