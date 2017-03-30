@@ -37,7 +37,6 @@ public final class ImageUtils {
 //        copy.getGraphics().drawImage(img, 0, 0, null);
 //        return copy;
 //    }
-
 //    private static BufferedImage toABGR(BufferedImage image) {
 //        if (image.getType() == BufferedImage.TYPE_4BYTE_ABGR) {
 //            return image;
@@ -55,7 +54,6 @@ public final class ImageUtils {
 //        workImage.getGraphics().drawImage(image, 0, 0, null);
 //        return workImage;
 //    }
-
     public static Dimension aspectScaledSize(int sourceWidth, int sourceHeight, int destWidth, int destHeight) {
         double sourceRatio = 1.0 * sourceHeight / sourceWidth;
         double destRatio = 1.0 * destHeight / destWidth;
@@ -96,14 +94,51 @@ public final class ImageUtils {
         return Optional.of(Scalr.resize(img.get(), quality.orElse(method), size.width, size.height));
     }
 
-    public static void drawAspectScaled(Graphics2D g, Optional<BufferedImage> img, Dimension size) {
-        drawAspectScaled(g,img,size,Optional.empty());
+    public static void drawIgnoringAspect(Graphics2D g, Optional<BufferedImage> img, Dimension size) {
+        drawIgnoringAspect(g, img, size, Optional.of(Scalr.Method.SPEED));
     }
+
+    public static void drawIgnoringAspect(Graphics2D g, Optional<BufferedImage> img, Dimension size, Optional<Scalr.Method> quality) {
+        setQualityHint(g, quality);
+        if (img.isPresent()) {
+            g.drawImage(img.get(), 0, 0, size.width, size.height, null);
+        } else {
+            g.setColor(Color.black);
+            g.fillRect(0, 0, size.width, size.height);
+        }
+    }
+
+    public static void drawAspectScaled(Graphics2D g, Optional<BufferedImage> img, Dimension size) {
+        drawAspectScaled(g, img, size, Optional.empty());
+    }
+
     public static void drawAspectScaled(Graphics2D g, Optional<BufferedImage> img, Dimension size, Optional<Scalr.Method> quality) {
         drawAspectScaled(g, img, size.width, size.height, quality);
     }
 
     public static void drawAspectScaled(Graphics2D g, Optional<BufferedImage> img, int width, int height, Optional<Scalr.Method> quality) {
+        setQualityHint(g, quality);
+        g.setColor(Color.black);
+        if (img.isPresent()) {
+            BufferedImage image = img.get();
+            Dimension scaledSize = aspectScaledSize(image.getWidth(), image.getHeight(), width, height);
+            Point offset = new Point((width - (int) scaledSize.width) / 2, (height - (int) scaledSize.height) / 2);
+            if (offset.x == 0) {
+                //need horizontal bars
+                g.fillRect(0, 0, width, offset.y);
+                g.fillRect(0, height - offset.y, width, offset.y);
+            } else {
+                //need vertical bars
+                g.fillRect(0, 0, offset.x, height);
+                g.fillRect(width - offset.x, 0, offset.x, height);
+            }
+            g.drawImage(image, offset.x, offset.y, (int) scaledSize.width, (int) scaledSize.height, null);
+        } else {
+            g.fillRect(0, 0, width, height);
+        }
+    }
+
+    private static void setQualityHint(Graphics2D g, Optional<Scalr.Method> quality) {
         Object qualityHint;
         switch (quality.orElse(method)) {
             case SPEED:
@@ -117,24 +152,6 @@ public final class ImageUtils {
                 break;
         }
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, qualityHint);
-        g.setColor(Color.black);
-        if (img.isPresent()) {
-            BufferedImage image = img.get();
-            Dimension scaledSize = aspectScaledSize(image.getWidth(), image.getHeight(), width, height);
-            Point offset = new Point((width - (int) scaledSize.width) / 2, (height - (int) scaledSize.height) / 2);
-            if (offset.x == 0) {
-                //need horizontal bars
-                g.fillRect(0, 0, width, offset.y);
-                g.fillRect(0, height - offset.y, width, offset.y);
-            } else {
-                //need vertical bars
-                g.fillRect(0,0, offset.x, height);
-                g.fillRect(width - offset.x, 0, offset.x, height);
-            }
-            g.drawImage(image, offset.x, offset.y, (int) scaledSize.width, (int) scaledSize.height, null);
-        } else {
-            g.fillRect(0, 0, width, height);
-        }
     }
 
     public static boolean needsScaling(BufferedImage img, Dimension targetSize) {

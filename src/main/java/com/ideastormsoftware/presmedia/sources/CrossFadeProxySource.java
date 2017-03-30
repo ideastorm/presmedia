@@ -105,6 +105,9 @@ public class CrossFadeProxySource extends ScaledSource {
         if (!img.isPresent()) {
             log("no source image");
         }
+        if (getSource().getClass().isAnnotationPresent(AspectAgnostic.class)) {
+            ImageUtils.drawIgnoringAspect(g, img, targetSize, quality);
+        } else
         ImageUtils.drawAspectScaled(g, img, targetSize, quality);
         if (fadeIntoSource != null) {
             Optional<BufferedImage> overlayImage = ImageUtils.copyAspectScaled(fadeIntoSource.get(), targetSize, quality);

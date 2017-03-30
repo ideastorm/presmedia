@@ -184,8 +184,6 @@ public class ControlView extends javax.swing.JFrame {
         displayMedia = new javax.swing.JToggleButton();
         jScrollPane3 = new javax.swing.JScrollPane();
         inputPreviews = new javax.swing.JPanel();
-        saveSettings = new javax.swing.JButton();
-        loadSettings = new javax.swing.JButton();
         loopMedia = new javax.swing.JCheckBox();
         deinterlaceCamera = new javax.swing.JCheckBox();
         jPanel3 = new javax.swing.JPanel();
@@ -211,7 +209,6 @@ public class ControlView extends javax.swing.JFrame {
         jPanel5 = new javax.swing.JPanel();
         colorSelector = new javax.swing.JButton();
         imageBgSelector = new javax.swing.JButton();
-        bgImagePath = new javax.swing.JTextField();
         jLabel11 = new javax.swing.JLabel();
 
         setTitle("Presmedia Control");
@@ -514,20 +511,6 @@ public class ControlView extends javax.swing.JFrame {
         inputPreviews.setLayout(null);
         jScrollPane3.setViewportView(inputPreviews);
 
-        saveSettings.setText("Save settings...");
-        saveSettings.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                saveSettingsActionPerformed(evt);
-            }
-        });
-
-        loadSettings.setText("Load Settings...");
-        loadSettings.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                loadSettingsActionPerformed(evt);
-            }
-        });
-
         loopMedia.setText("Loop Selected Media Files");
 
         deinterlaceCamera.setText("Deinterlace Video");
@@ -574,7 +557,7 @@ public class ControlView extends javax.swing.JFrame {
                     .addGroup(jPanel3Layout.createSequentialGroup()
                         .addComponent(jLabel9)
                         .addGap(28, 28, 28)
-                        .addComponent(audioBufferFill, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addComponent(audioBufferFill, javax.swing.GroupLayout.DEFAULT_SIZE, 151, Short.MAX_VALUE))
                     .addGroup(jPanel3Layout.createSequentialGroup()
                         .addComponent(crossfadeFps)
                         .addGap(0, 0, Short.MAX_VALUE))
@@ -705,8 +688,6 @@ public class ControlView extends javax.swing.JFrame {
             }
         });
 
-        bgImagePath.setToolTipText("");
-
         javax.swing.GroupLayout jPanel5Layout = new javax.swing.GroupLayout(jPanel5);
         jPanel5.setLayout(jPanel5Layout);
         jPanel5Layout.setHorizontalGroup(
@@ -714,18 +695,15 @@ public class ControlView extends javax.swing.JFrame {
             .addGroup(jPanel5Layout.createSequentialGroup()
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(colorSelector)
-                    .addComponent(imageBgSelector)
-                    .addComponent(bgImagePath, javax.swing.GroupLayout.PREFERRED_SIZE, 162, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(0, 0, Short.MAX_VALUE))
+                    .addComponent(imageBgSelector))
+                .addGap(0, 63, Short.MAX_VALUE))
         );
         jPanel5Layout.setVerticalGroup(
             jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel5Layout.createSequentialGroup()
                 .addComponent(colorSelector)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(imageBgSelector)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(bgImagePath, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addComponent(imageBgSelector))
         );
 
         jLabel11.setText("Background");
@@ -737,17 +715,18 @@ public class ControlView extends javax.swing.JFrame {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(configureCameras, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 144, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(0, 0, Short.MAX_VALUE))
-                            .addComponent(displayCamera, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                        .addComponent(jScrollPane3)
+                    .addComponent(configureCameras, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(displayCamera, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(layout.createSequentialGroup()
                         .addComponent(deinterlaceCamera)
-                        .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addComponent(jLabel11))
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                            .addComponent(jPanel5, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jLabel11, javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 144, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jScrollPane3, javax.swing.GroupLayout.Alignment.LEADING))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 9, Short.MAX_VALUE)))
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addGroup(layout.createSequentialGroup()
                         .addGap(10, 10, 10)
@@ -771,11 +750,6 @@ public class ControlView extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(outputContainer, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addGap(0, 0, Short.MAX_VALUE)
-                        .addComponent(saveSettings)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(loadSettings))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jLabel2)
                         .addGap(0, 0, Short.MAX_VALUE))
@@ -804,7 +778,7 @@ public class ControlView extends javax.swing.JFrame {
                                         .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                         .addComponent(jLabel1)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                         .addComponent(jScrollPane3)))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
@@ -826,10 +800,7 @@ public class ControlView extends javax.swing.JFrame {
                         .addComponent(jLabel2)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(outputContainer, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(loadSettings)
-                            .addComponent(saveSettings))))
+                        .addGap(34, 34, 34)))
                 .addContainerGap())
         );
 
@@ -963,32 +934,6 @@ public class ControlView extends javax.swing.JFrame {
     private void mediaListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_mediaListValueChanged
 
     }//GEN-LAST:event_mediaListValueChanged
-
-    private void saveSettingsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveSettingsActionPerformed
-        JFileChooser saveChooser = new JFileChooser();
-        saveChooser.setFileFilter(new FileNameExtensionFilter("Presmedia settings (*.presmedia)", "presmedia"));
-        int result = saveChooser.showSaveDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            String selectedFile = saveChooser.getSelectedFile().getPath();
-            if (!selectedFile.endsWith(".presmedia")) {
-                selectedFile = selectedFile + ".presmedia";
-            }
-            saveSettingsToFile(new File(selectedFile));
-        }
-    }//GEN-LAST:event_saveSettingsActionPerformed
-
-    private void loadSettingsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loadSettingsActionPerformed
-        JFileChooser openChooser = new JFileChooser();
-        openChooser.setFileFilter(new FileNameExtensionFilter("Presmedia settings (*.presmedia)", "presmedia"));
-        int result = openChooser.showOpenDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            try {
-                loadSettingsFromFile(openChooser.getSelectedFile());
-            } catch (IOException ex) {
-                JOptionPane.showMessageDialog(this, ex.getMessage(), "Failed to load file", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }//GEN-LAST:event_loadSettingsActionPerformed
 
     private void addSlideshowActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addSlideshowActionPerformed
         Slideshow newShow = new Slideshow();
@@ -1144,7 +1089,6 @@ public class ControlView extends javax.swing.JFrame {
         int result = chooser.showDialog(rootPane, "Select");
         if (result == JFileChooser.APPROVE_OPTION) {
             try {
-                bgImagePath.setText(chooser.getSelectedFile().getPath());
                 BufferedImage image = ImageIO.read(chooser.getSelectedFile());
                 backgroundSource = () -> Optional.of(image);
                 updatePreview();
@@ -1198,7 +1142,6 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JButton addSong;
     private javax.swing.JButton advanceLyrics;
     private javax.swing.JProgressBar audioBufferFill;
-    private javax.swing.JTextField bgImagePath;
     private javax.swing.JButton colorSelector;
     private javax.swing.JButton configureCameras;
     private javax.swing.JProgressBar cpuGraph;
@@ -1234,7 +1177,6 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JScrollPane jScrollPane4;
     private javax.swing.JScrollPane jScrollPane5;
-    private javax.swing.JButton loadSettings;
     private javax.swing.JCheckBox loopMedia;
     private javax.swing.JList mediaList;
     private javax.swing.JPanel mediaPreviewContainer;
@@ -1248,7 +1190,6 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JButton removeName;
     private javax.swing.JButton removeSlideshow;
     private javax.swing.JButton removeSong;
-    private javax.swing.JButton saveSettings;
     private javax.swing.JComboBox scalingMethodPicker;
     private javax.swing.JButton seekFwd;
     private javax.swing.JButton seekRev;
@@ -1306,13 +1247,5 @@ public class ControlView extends javax.swing.JFrame {
             e.printStackTrace();
             source.setSource(backgroundSource);
         }
-    }
-
-    private void saveSettingsToFile(File selectedFile) {
-        new Settings(mediaListModel, lyricsListModel, slideListModel, nameListModel).saveToFile(selectedFile);
-    }
-
-    private void loadSettingsFromFile(File selectedFile) throws IOException {
-        new Settings(mediaListModel, lyricsListModel, slideListModel, nameListModel).loadFromFile(selectedFile);
     }
 }

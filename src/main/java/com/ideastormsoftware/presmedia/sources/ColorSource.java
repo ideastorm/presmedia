@@ -23,6 +23,7 @@ import java.awt.image.BufferedImage;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+@AspectAgnostic
 public class ColorSource implements Supplier<Optional<BufferedImage>> {
 
     private Color color;
