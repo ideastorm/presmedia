@@ -20,9 +20,11 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.util.ArrayDeque;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import org.imgscalr.Scalr;
 
 public class ImagePainter {
 
@@ -41,6 +43,7 @@ public class ImagePainter {
     }
 
     private ScaledSource source;
+    private Optional<Scalr.Method> quality;
 
     ImagePainter(Dimension size) {
         this.width = (int) size.getWidth();
@@ -51,7 +54,7 @@ public class ImagePainter {
         return paintTimer.getRate();
     }
 
-    public void setup(ScaledSource source, Supplier<Double> fpsSource, Runnable callback) {
+    public void setup(ScaledSource source, Supplier<Double> fpsSource, Optional<Scalr.Method> quality, Runnable callback) {
         this.fpsSource = fpsSource;
         this.paintTimer = new LoopingThread(() -> {
             if (callback != null) {
@@ -59,6 +62,7 @@ public class ImagePainter {
             }
         });
         this.source = source;
+        this.quality = quality;
         paintTimer.start();
     }
 
@@ -66,7 +70,7 @@ public class ImagePainter {
         g.setColor(Color.black);
         g.fillRect(0, 0, width, height);
         final Dimension size = new Dimension(width, height);
-        source.scaleInto(g, size);
+        source.scaleInto(g, size, quality);
         if (fpsSource != null) {
             String fps = String.format("FPS: %01.1f SFPS: %01.1f", paintTimer.getRate(), fpsSource.get());
             g.setColor(Color.black);

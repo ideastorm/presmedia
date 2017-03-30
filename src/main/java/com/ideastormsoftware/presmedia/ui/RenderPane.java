@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import javax.swing.JPanel;
 import javax.swing.border.Border;
+import org.imgscalr.Scalr;
 
 public class RenderPane extends JPanel {
 
@@ -63,7 +64,7 @@ public class RenderPane extends JPanel {
         });
 
         painter = new ImagePainter(getSize());
-        painter.setup(source, fpsSrc, () -> {
+        painter.setup(source, fpsSrc, Optional.of(Scalr.Method.SPEED), () -> {
             repaint(1);
         });
     }

@@ -25,6 +25,7 @@ import java.awt.HeadlessException;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.image.BufferStrategy;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public class Projector extends Window {
@@ -35,7 +36,7 @@ public class Projector extends Window {
     public Projector(ScaledSource source) throws HeadlessException {
         super(null);
         this.painter = new ImagePainter(this.getSize());
-        painter.setup(source, null, () -> {
+        painter.setup(source, null, Optional.empty(), () -> {
             Toolkit.getDefaultToolkit().sync();
             BufferStrategy strategy = getBufferStrategy();
             if (strategy != null) {

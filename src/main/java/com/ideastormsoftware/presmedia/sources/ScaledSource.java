@@ -21,6 +21,7 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.Optional;
 import java.util.function.Supplier;
+import org.imgscalr.Scalr;
 
 /**
  *
@@ -38,7 +39,7 @@ public class ScaledSource {
         return this;
     }
 
-    public void scaleInto(Graphics2D graphics, Dimension targetSize) {
+    public void scaleInto(Graphics2D graphics, Dimension targetSize, Optional<Scalr.Method> quality) {
         if (graphics == null) {
             throw new IllegalArgumentException("graphics is null");
         }
@@ -48,10 +49,10 @@ public class ScaledSource {
         if (targetSize == null) {
             throw new IllegalArgumentException("targetSize is null");
         }
-        drawScaled(graphics, source.get(), targetSize);
+        drawScaled(graphics, source.get(), targetSize, quality);
     }
 
-    protected void drawScaled(Graphics2D graphics, Optional<BufferedImage> image, Dimension targetSize) {
-        ImageUtils.drawAspectScaled(graphics, image, targetSize);
+    protected void drawScaled(Graphics2D graphics, Optional<BufferedImage> image, Dimension targetSize, Optional<Scalr.Method> quality) {
+        ImageUtils.drawAspectScaled(graphics, image, targetSize, quality);
     }
 }

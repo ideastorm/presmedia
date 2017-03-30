@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
+import org.imgscalr.Scalr;
 
 public class CrossFadeProxySource extends ScaledSource {
 
@@ -95,7 +96,7 @@ public class CrossFadeProxySource extends ScaledSource {
     }
 
     @Override
-    protected void drawScaled(Graphics2D g, Optional<BufferedImage> img, Dimension targetSize) {
+    protected void drawScaled(Graphics2D g, Optional<BufferedImage> img, Dimension targetSize, Optional<Scalr.Method> quality) {
         if (img == lastImage) {
             duplicates.addValue(1);
         }
@@ -103,7 +104,7 @@ public class CrossFadeProxySource extends ScaledSource {
         long startTime = System.nanoTime();
         ImageUtils.drawAspectScaled(g, img, targetSize);
         if (fadeIntoSource != null) {
-            Optional<BufferedImage> overlayImage = ImageUtils.copyAspectScaled(fadeIntoSource.get(), targetSize);
+            Optional<BufferedImage> overlayImage = ImageUtils.copyAspectScaled(fadeIntoSource.get(), targetSize, quality);
             float alpha = findAlpha();
             if (alpha >= 1) {
                 alpha = 1;

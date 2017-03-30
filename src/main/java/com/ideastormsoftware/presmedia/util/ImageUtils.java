@@ -67,14 +67,14 @@ public final class ImageUtils {
         }
     }
 
-    public static BufferedImage copyAspectScaled(BufferedImage img, int width, int height) {
+    public static BufferedImage copyAspectScaled(BufferedImage img, int width, int height, Optional<Scalr.Method> quality) {
         if (img == null) {
             return emptyImage();
         }
         if (img.getWidth() == width && img.getHeight() == height) {
             return img;
         }
-        return Scalr.resize(img, method, width, height);
+        return Scalr.resize(img, quality.orElse(method), width, height);
     }
 
     public static BufferedImage emptyImage() {
@@ -86,23 +86,26 @@ public final class ImageUtils {
         return new BufferedImage(size.width, size.height, BufferedImage.TYPE_INT_RGB);
     }
 
-    public static Optional<BufferedImage> copyAspectScaled(Optional<BufferedImage> img, Dimension size) {
+    public static Optional<BufferedImage> copyAspectScaled(Optional<BufferedImage> img, Dimension size, Optional<Scalr.Method> quality) {
         if (!img.isPresent()) {
             return Optional.empty();
         }
         if (size.width < 1 || size.height < 1) {
             return Optional.empty();
         }
-        return Optional.of(Scalr.resize(img.get(), method, size.width, size.height));
+        return Optional.of(Scalr.resize(img.get(), quality.orElse(method), size.width, size.height));
     }
 
     public static void drawAspectScaled(Graphics2D g, Optional<BufferedImage> img, Dimension size) {
-        drawAspectScaled(g, img, size.width, size.height);
+        drawAspectScaled(g,img,size,Optional.empty());
+    }
+    public static void drawAspectScaled(Graphics2D g, Optional<BufferedImage> img, Dimension size, Optional<Scalr.Method> quality) {
+        drawAspectScaled(g, img, size.width, size.height, quality);
     }
 
-    public static void drawAspectScaled(Graphics2D g, Optional<BufferedImage> img, int width, int height) {
+    public static void drawAspectScaled(Graphics2D g, Optional<BufferedImage> img, int width, int height, Optional<Scalr.Method> quality) {
         Object qualityHint;
-        switch (method) {
+        switch (quality.orElse(method)) {
             case SPEED:
                 qualityHint = RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR;
                 break;
