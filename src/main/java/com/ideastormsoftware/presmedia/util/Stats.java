@@ -73,11 +73,12 @@ public class Stats {
     }
 
     public double getRate() {
-        if (timestamps.isEmpty()) {
+        long currentTime = System.currentTimeMillis();
+        Long peekTime = timestamps.peek();
+        if (peekTime == null) {
             return 0;
         }
-        long currentTime = System.currentTimeMillis();
-        long totalTime = currentTime - timestamps.peek();
+        long totalTime = currentTime - peekTime;
         return timestamps.size() / (totalTime * 0.001);
     }
 

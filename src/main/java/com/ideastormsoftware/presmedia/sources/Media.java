@@ -546,7 +546,9 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                             updateThread = new Thread(() -> {
                                 try {
                                     while (!interrupted()) {
-                                        setMediaPosition(mLine.getMicrosecondPosition() + offset);
+                                        if (mLine != null) {
+                                            setMediaPosition(mLine.getMicrosecondPosition() + offset);
+                                        }
                                         sleep(1);
                                     }
                                 } catch (InterruptedException e) {

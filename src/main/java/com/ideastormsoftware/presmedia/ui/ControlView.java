@@ -13,11 +13,24 @@ import com.ideastormsoftware.presmedia.sources.media.AvException;
 import com.ideastormsoftware.presmedia.util.DisplayFile;
 import com.ideastormsoftware.presmedia.util.RollingAverage;
 import java.awt.Color;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DragGestureEvent;
+import java.awt.dnd.DragGestureListener;
+import java.awt.dnd.DragGestureRecognizer;
+import java.awt.dnd.DragSource;
+import java.awt.dnd.DragSourceDragEvent;
+import java.awt.dnd.DragSourceDropEvent;
+import java.awt.dnd.DragSourceEvent;
+import java.awt.dnd.DragSourceListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -27,6 +40,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.swing.DefaultListModel;
+import javax.swing.DropMode;
 import javax.swing.JColorChooser;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
@@ -120,6 +134,10 @@ public class ControlView extends javax.swing.JFrame {
         mediaPreview.setSize(201, 134);
         mediaListModel = new DefaultListModel<>();
         mediaList.setModel(mediaListModel);
+        mediaList.setTransferHandler(new FileListHandler(mediaListModel));
+        mediaList.setDropMode(DropMode.INSERT);
+        mediaList.setDragEnabled(true);
+
         lyricsListModel = new DefaultListModel<>();
         songList.setModel(lyricsListModel);
         slideListModel = new DefaultListModel<>();
@@ -223,6 +241,7 @@ public class ControlView extends javax.swing.JFrame {
             public int getSize() { return strings.length; }
             public Object getElementAt(int i) { return strings[i]; }
         });
+        mediaList.setDragEnabled(true);
         mediaList.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
             public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
                 mediaListValueChanged(evt);
