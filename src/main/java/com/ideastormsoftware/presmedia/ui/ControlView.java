@@ -1230,10 +1230,11 @@ public class ControlView extends javax.swing.JFrame {
 
                     @Override
                     public void run() {
+                        List<File> selectedMedia = mediaList.getSelectedValuesList();
                         try {
                             mediaIndex++;
                             if (mediaIndex >= selectedMedia.size()) {
-                                if (loopMedia.isSelected()) {
+                                if (loopMedia.isSelected() && !selectedMedia.isEmpty()) {
                                     mediaIndex = 0;
                                 } else {
                                     displayMedia.setSelected(false);
