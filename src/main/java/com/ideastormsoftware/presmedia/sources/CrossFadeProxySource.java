@@ -23,12 +23,15 @@ import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Supplier;
 import org.imgscalr.Scalr;
 
-public class CrossFadeProxySource extends ScaledSource {
+public class CrossFadeProxySource extends ScaledSource implements SyncSource {
 
     private Supplier<Optional<BufferedImage>> fadeIntoSource;
     private static final double fadeDuration = 0.5;
@@ -37,6 +40,7 @@ public class CrossFadeProxySource extends ScaledSource {
     private final List<ImageOverlay> postScaleOverlays = new ArrayList<>();
     private Optional<BufferedImage> lastImage = Optional.empty();
     private final Stats duplicates = new Stats();
+    private final Set<SyncSourceListener> listeners = Collections.synchronizedSet(new HashSet<SyncSourceListener>());
 
     public void appendOverlay(ImageOverlay overlay) {
         synchronized (postScaleOverlays) {
@@ -58,6 +62,33 @@ public class CrossFadeProxySource extends ScaledSource {
         if (source instanceof Startable) {
             ((Startable) source).start();
         }
+        if (source instanceof SyncSource) {
+            ((SyncSource) source).addListener(new SyncSourceListener() {
+                @Override
+                public void frameNotify() {
+                    synchronized (listeners) {
+                        for (SyncSourceListener listener : listeners) {
+                            listener.frameNotify();
+                        }
+                    }
+                }
+
+                @Override
+                public void setSyncEnabled(boolean enableSync) {
+                }
+            });
+            synchronized (listeners) {
+                for (SyncSourceListener listener : listeners) {
+                    listener.setSyncEnabled(true);
+                }
+            }
+        } else {
+            synchronized (listeners) {
+                for (SyncSourceListener listener : listeners) {
+                    listener.setSyncEnabled(false);
+                }
+            }
+        }
         if (fadeIntoSource != null) {
             if (getSource() instanceof CleanCloseable) {
                 ((CleanCloseable) getSource()).close();
@@ -66,6 +97,16 @@ public class CrossFadeProxySource extends ScaledSource {
         }
         setFadeSourceInternal(source);
         return this;
+    }
+
+    @Override
+    public void addListener(SyncSourceListener l) {
+        listeners.add(l);
+    }
+
+    @Override
+    public void removeListener(SyncSourceListener l) {
+        listeners.remove(l);
     }
 
     public CrossFadeProxySource setSourceNoFade(Supplier<Optional<BufferedImage>> source) {
@@ -104,8 +145,9 @@ public class CrossFadeProxySource extends ScaledSource {
         long startTime = System.nanoTime();
         if (getSource().getClass().isAnnotationPresent(AspectAgnostic.class)) {
             ImageUtils.drawIgnoringAspect(g, img, targetSize, quality);
-        } else
-        ImageUtils.drawAspectScaled(g, img, targetSize, quality);
+        } else {
+            ImageUtils.drawAspectScaled(g, img, targetSize, quality);
+        }
         if (fadeIntoSource != null) {
             Optional<BufferedImage> overlayImage = ImageUtils.copyAspectScaled(fadeIntoSource.get(), targetSize, quality);
             float alpha = findAlpha();

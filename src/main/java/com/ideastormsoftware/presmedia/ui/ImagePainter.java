@@ -16,17 +16,20 @@
 package com.ideastormsoftware.presmedia.ui;
 
 import com.ideastormsoftware.presmedia.sources.ScaledSource;
+import com.ideastormsoftware.presmedia.sources.SyncSource;
+import com.ideastormsoftware.presmedia.sources.SyncSourceListener;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.util.ArrayDeque;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.imgscalr.Scalr;
 
-public class ImagePainter {
+public class ImagePainter implements SyncSourceListener{
 
     private static int targetFps = 30; //set to screen refresh rate /2
 
@@ -37,6 +40,7 @@ public class ImagePainter {
     private int width;
     private int height;
     private Supplier<Double> fpsSource;
+    private Semaphore syncSemaphore = null;
 
     public static void setFrameRate(int targetFps) {
         ImagePainter.targetFps = targetFps;
@@ -57,11 +61,23 @@ public class ImagePainter {
     public void setup(ScaledSource source, Supplier<Double> fpsSource, Optional<Scalr.Method> quality, Runnable callback) {
         this.fpsSource = fpsSource;
         this.paintTimer = new LoopingThread(() -> {
+            try {
+            if (syncSemaphore != null) {
+                syncSemaphore.acquire();
+            }
             if (callback != null) {
                 callback.run();
             }
+            } catch (InterruptedException e) {
+            }
         });
         this.source = source;
+        if (source instanceof SyncSource) {
+            ((SyncSource)source).addListener(this);
+            syncSemaphore = new Semaphore(0);
+        } else {
+            syncSemaphore = null;
+        }
         this.quality = quality;
         paintTimer.start();
     }
@@ -84,6 +100,21 @@ public class ImagePainter {
         this.width = (int) size.getWidth();
         this.height = (int) size.getHeight();
 
+    }
+
+    @Override
+    public void frameNotify() {
+        if (syncSemaphore != null) {
+            syncSemaphore.release();
+        }
+    }
+
+    @Override
+    public void setSyncEnabled(boolean enableSync) {
+        if (enableSync) {
+            syncSemaphore = new Semaphore(0);
+        } else
+            syncSemaphore = null;
     }
 
     private static class LoopingThread extends Thread {

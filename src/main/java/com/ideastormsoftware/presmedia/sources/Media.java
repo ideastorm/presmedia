@@ -34,8 +34,11 @@ import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -58,7 +61,7 @@ import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_U8;
 import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_U8P;
 import static org.bytedeco.javacpp.avutil.av_get_sample_fmt_name;
 
-public class Media implements ImageSource, CleanCloseable, Startable, Pauseable {
+public class Media implements ImageSource, CleanCloseable, Startable, Pauseable, SyncSource {
 
     private SourceDataLine mLine;
     private AudioConverter converter;
@@ -79,6 +82,8 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
     private final String sourceFile;
     private volatile BufferedImage currentImage = null;
     private final Stats fpsStats = new Stats();
+
+    private final Set<SyncSourceListener> listeners = Collections.synchronizedSet(new HashSet<SyncSourceListener>());
 
     private static void log(String format, Object... params) {
         System.out.println(String.format("%d %s - %s", System.currentTimeMillis(),
@@ -132,7 +137,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
         }
         boolean pauseState = paused;
         setPaused(true);
-        delay(5, TimeUnit.MILLISECONDS); //give time for the pause to take effect
+        delay(50, TimeUnit.MILLISECONDS); //give time for the pause to take effect
         ffmpeg.setTimestamp(position);
         frameQueueSize.set(0);
         if (currentImage != null) {
@@ -333,14 +338,16 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                     ffmpeg = FFmpegFrameGrabber.createDefault(getSourceFile());
                     try {
                         ffmpeg.start();
-                        openJavaSound(ffmpeg.getSampleFormat(), ffmpeg.getAudioChannels(), ffmpeg.getSampleRate());
-                        log("sound system initialized");
                         mediaDuration = ffmpeg.getLengthInTime();
                         boolean started = false;
                         minimumFrames = ffmpeg.getVideoBitrate() < 0 ? 0 : 5;
                         minimumSamples = ffmpeg.getAudioBitrate() < 0 ? 0 : 5;
                         if (minimumFrames > 0) {
                             Media.this.frameRate = ffmpeg.getFrameRate();
+                        }
+                        if (minimumSamples > 0) {
+                            openJavaSound(ffmpeg.getSampleFormat(), ffmpeg.getAudioChannels(), ffmpeg.getSampleRate());
+                            log("sound system initialized");
                         }
                         while (!canceled && !interrupted()) {
                             if (paused && !postSeekBuffer) {
@@ -437,6 +444,25 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
         }
     }
 
+    @Override
+    public void addListener(SyncSourceListener l) {
+        l.setSyncEnabled(true);
+        listeners.add(l);
+    }
+
+    @Override
+    public void removeListener(SyncSourceListener l) {
+        listeners.remove(l);
+    }
+
+    private void notifyListeners() {
+        synchronized (listeners) {
+            for (SyncSourceListener listener : listeners) {
+                listener.frameNotify();
+            }
+        }
+    }
+
     private class VideoThread extends Thread {
 
         volatile boolean canceled = false;
@@ -455,17 +481,15 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
         @Override
         public void run() {
             long lastFrame = microTime();
-            Stats interframeStats = new Stats();
-            interframeStats.addValue((long) (1_000_000 / frameRate));
+            Long interframe = (long) (1_000_000 / frameRate);
             try {
                 while (!canceled && !interrupted()) {
                     if (paused) {
                         delay(2);
                         lastFrame = microTime();
                     } else {
-                        long interframe = interframeStats.getAverage();
                         long frameStart = microTime();
-                        double targetTime = lastFrame + interframe;
+                        long targetTime = lastFrame + interframe;
                         DataFrame<BufferedImage> frame = frames.poll();
                         if (frame != null) {
                             frameQueueSize.decrementAndGet();
@@ -474,6 +498,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                                 imageBuffer.offer(currentImage); //recycle it!
                             }
                             currentImage = image;
+                            notifyListeners();
                             if (minimumSamples > 0) {
                                 long mediaPosition = getMediaPosition();
                                 long delta = frame.timestamp - mediaPosition;
@@ -487,7 +512,6 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                                     targetTime += delta / 4; //delta is negative here
                                 } else {
                                     closeMatch.addValue(delta);
-                                    targetTime = lastFrame + interframe;
                                 }
                             } else {
                                 setMediaPosition(frame.timestamp);
@@ -496,13 +520,12 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
                         }
                         long predelayMicros = microTime();
                         if (predelayMicros < targetTime) {
-                            long delay = Math.min((long) (targetTime - predelayMicros), interframe * 5);
+                            long delay = Math.min(targetTime - predelayMicros, interframe * 2);
                             fpsStats.addValue(delay);
                             TimeUnit.MICROSECONDS.sleep(delay);
                         } else {
                             fpsStats.addValue(0);
                         }
-                        interframeStats.addValue(microTime() - frameStart);
                         lastFrame = frameStart;
                     }
                 }
@@ -511,7 +534,6 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
             } catch (Throwable e) {
                 e.printStackTrace();
             } finally {
-                interframeStats.report("Interframe spacing", 0.001);
                 fastVideo.report("Video running fast", 0.001);
                 slowVideo.report("Video running slow", 0.001);
                 closeMatch.report("A/V sync", 0.001);
@@ -533,12 +555,18 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable 
             Thread updateThread = null;
             while (!canceled && !interrupted()) {
                 if (paused) {
+                    if (mLine != null) {
+                        mLine.stop();
+                    }
                     delay(2);
                     if (updateThread != null) {
                         updateThread.interrupt();
                         updateThread = null;
                     }
                 } else {
+                    if (mLine != null && !mLine.isRunning()) {
+                        mLine.start();
+                    }
                     DataFrame<byte[]> frame = samples.poll();
                     if (frame != null) {
                         if (updateThread == null) {
