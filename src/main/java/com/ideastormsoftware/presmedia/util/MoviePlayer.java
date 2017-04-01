@@ -22,8 +22,6 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -63,8 +61,10 @@ public class MoviePlayer implements Runnable {
         mediaSource.start();
         new Thread(()->{
             try {
-                TimeUnit.SECONDS.sleep(10);
+                TimeUnit.SECONDS.sleep(20);
                 mediaSource.close();
+                TimeUnit.SECONDS.sleep(1);
+                System.exit(0);
             } catch (InterruptedException ex) {
             }
         }).start();

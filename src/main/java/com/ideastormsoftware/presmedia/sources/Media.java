@@ -39,6 +39,8 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
@@ -441,6 +443,10 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
         }
     }
 
+    private long microTime() {
+        return System.nanoTime() / 1000;
+    }
+
     private class VideoThread extends Thread {
 
         volatile boolean canceled = false;
@@ -453,23 +459,17 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
             super("VideoThread");
         }
 
-        private long microTime() {
-            return System.nanoTime() / 1000;
-        }
-
         @Override
         public void run() {
-            long lastFrame = microTime();
             Long interframe = (long) (1_000_000 / frameRate);
+            long delayStep = (long) (interframe / frameRate);
             long lastMediaPosition = 0;
             try {
                 while (!canceled && !interrupted()) {
                     if (paused) {
                         delay(2);
-                        lastFrame = microTime();
                     } else {
                         long frameStart = microTime();
-                        long targetTime = lastFrame + interframe;
                         DataFrame<BufferedImage> frame = frames.poll();
                         if (frame != null) {
                             frameQueueSize.decrementAndGet();
@@ -483,34 +483,20 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
                                 long mediaPosition = getMediaPosition();
                                 positionJump.addValue(mediaPosition - lastMediaPosition);
                                 lastMediaPosition = mediaPosition;
-                                long delta = frame.timestamp - mediaPosition;
-                                boolean fast = frame.timestamp > mediaPosition;
-                                boolean slow = frame.timestamp + interframe < mediaPosition;
-                                if (fast) {
-                                    fastVideo.addValue(delta);
-                                    targetTime += delta / 2;
-                                    interframe+=10;
-                                } else if (slow) {
-                                    slowVideo.addValue(delta);
-                                    targetTime += delta / 4; //delta is negative here
-                                    interframe-=5;
-                                } else {
-                                    closeMatch.addValue(delta);
+                                long delay = 0;
+                                while (frame.timestamp > getMediaPosition() + interframe && delay < interframe) {
+                                    delay += delayStep;
+                                    TimeUnit.MICROSECONDS.sleep(delayStep);
                                 }
+                                fpsStats.addValue(delay);
                             } else {
                                 setMediaPosition(frame.timestamp);
+                                long delay = interframe - (microTime() - frameStart);
+                                fpsStats.addValue(delay);
+                                TimeUnit.MICROSECONDS.sleep(delay);
                             }
                             videoPosition = frame.timestamp;
                         }
-                        long predelayMicros = microTime();
-                        if (predelayMicros < targetTime) {
-                            long delay = Math.min(targetTime - predelayMicros, interframe * 2);
-                            fpsStats.addValue(delay);
-                            TimeUnit.MICROSECONDS.sleep(delay);
-                        } else {
-                            fpsStats.addValue(0);
-                        }
-                        lastFrame = frameStart;
                     }
                 }
             } catch (InterruptedException e) {
@@ -518,10 +504,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
             } catch (Throwable e) {
                 e.printStackTrace();
             } finally {
-                fastVideo.report("Video running fast", 0.001);
-                slowVideo.report("Video running slow", 0.001);
-                closeMatch.report("A/V sync", 0.001);
-                fpsStats.report("post-processing delay", 0.001);
+                fpsStats.report("interframe delay", 0.001);
                 positionJump.report("Media position deltas", 0.001);
             }
         }
@@ -558,9 +541,16 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
                             final long offset = frame.timestamp - mLine.getMicrosecondPosition();
                             updateThread = new Thread(() -> {
                                 try {
+                                    long lastUpdate = microTime();
+                                    long lastPosition = 0;
                                     while (!interrupted()) {
                                         if (mLine != null) {
-                                            setMediaPosition(mLine.getMicrosecondPosition() + offset);
+                                            long readPosition = mLine.getMicrosecondPosition();
+                                            if (readPosition != lastPosition) {
+                                                lastPosition = readPosition;
+                                                lastUpdate = microTime();
+                                            }
+                                            setMediaPosition(lastPosition + offset + microTime() - lastUpdate);
                                         }
                                         sleep(1);
                                     }
