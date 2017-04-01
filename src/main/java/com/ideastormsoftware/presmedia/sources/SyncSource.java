@@ -15,11 +15,37 @@
  */
 package com.ideastormsoftware.presmedia.sources;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  *
  * @author philj
  */
 public interface SyncSource {
-    void addListener(SyncSourceListener l);
-    void removeListener(SyncSourceListener l);
+
+    static final ConcurrentHashMap<Object, Set<SyncSourceListener>> listenerMap = new ConcurrentHashMap<>();
+
+    default Set<SyncSourceListener> getListeners() {
+        return listenerMap.computeIfAbsent(this, (t) -> Collections.synchronizedSet(new HashSet<SyncSourceListener>()));
+    }
+
+    default void addListener(SyncSourceListener l) {
+        Set<SyncSourceListener> listeners = getListeners();
+        listeners.add(l);
+    }
+
+    default void removeListener(SyncSourceListener l) {
+        Set<SyncSourceListener> listeners = getListeners();
+        listeners.remove(l);
+    }
+
+    default void notifyListeners() {
+        Set<SyncSourceListener> listeners = getListeners();
+        synchronized (listeners) {
+            listeners.forEach(SyncSourceListener::frameNotify);
+        }
+    }
 }

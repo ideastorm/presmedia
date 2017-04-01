@@ -37,7 +37,7 @@ public class Projector extends Window {
         super(null);
         this.painter = new ImagePainter(this.getSize());
         painter.setup(source, null, Optional.empty(), () -> {
-            Toolkit.getDefaultToolkit().sync();
+//            Toolkit.getDefaultToolkit().sync();
             BufferStrategy strategy = getBufferStrategy();
             if (strategy != null) {
                 do {
@@ -49,7 +49,8 @@ public class Projector extends Window {
                     strategy.show();
                 } while (strategy.contentsLost());
             }
-            frameCallback.accept(painter.getFps());
+            if (frameCallback != null)
+                frameCallback.accept(painter.getFps());
         });
     }
     

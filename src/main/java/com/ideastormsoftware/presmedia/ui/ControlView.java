@@ -103,7 +103,7 @@ public class ControlView extends javax.swing.JFrame {
      */
     public ControlView() {
         initComponents();
-        source = new CrossFadeProxySource().setSourceNoFade(backgroundSource);
+        source = new CrossFadeProxySource().setSource(backgroundSource);
         projector = new Projector(source);
         projector.setFrameCallback((fps) -> {
             projectorFps.setText(String.format("Projector FPS: %01.1f", fps));

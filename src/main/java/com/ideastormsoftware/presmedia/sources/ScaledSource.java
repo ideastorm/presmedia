@@ -20,6 +20,7 @@ import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Supplier;
 import org.imgscalr.Scalr;
 
@@ -27,20 +28,49 @@ import org.imgscalr.Scalr;
  *
  * @author Phillip Hayward <phil@pjhayward.net>
  */
-public class ScaledSource {
+public class ScaledSource implements SyncSource {
 
     private Supplier<Optional<BufferedImage>> source = new ColorSource();
+    private SyncSourceListener syncSourceListener;
 
     public ScaledSource setSource(Supplier<Optional<BufferedImage>> source) {
         if (source == null) {
             source = new ColorSource();
         }
+        updateSyncSource(source);
         this.source = source;
         return this;
     }
-    
+
     protected Supplier<Optional<BufferedImage>> getSource() {
         return source;
+    }
+
+    protected void updateSyncSource(Supplier<Optional<BufferedImage>> newSource) {
+        if (source instanceof SyncSource) {
+            ((SyncSource) source).removeListener(syncSourceListener);
+        }
+        Set<SyncSourceListener> listeners = getListeners();
+        if (newSource instanceof SyncSource) {
+            syncSourceListener = new SyncSourceListener() {
+                @Override
+                public void frameNotify() {
+                    notifyListeners();
+                }
+            };
+            ((SyncSource) newSource).addListener(syncSourceListener);
+            synchronized (listeners) {
+                listeners.forEach((listener) -> {
+                    listener.setSyncEnabled(true);
+                });
+            }
+        } else {
+            synchronized (listeners) {
+                listeners.forEach((listener) -> {
+                    listener.setSyncEnabled(false);
+                });
+            }
+        }
     }
 
     public void scaleInto(Graphics2D graphics, Dimension targetSize, Optional<Scalr.Method> quality) {

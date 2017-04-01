@@ -20,6 +20,10 @@ package com.ideastormsoftware.presmedia.sources;
  * @author philj
  */
 public interface SyncSourceListener {
-    void frameNotify();
-    void setSyncEnabled(boolean enableSync);
+
+    default void frameNotify() {
+    }
+
+    default void setSyncEnabled(boolean enableSync) {
+    }
 }

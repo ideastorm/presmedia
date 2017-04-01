@@ -21,15 +21,18 @@ import com.ideastormsoftware.presmedia.sources.SyncSourceListener;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.util.ArrayDeque;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.imgscalr.Scalr;
 
-public class ImagePainter implements SyncSourceListener{
+public class ImagePainter implements SyncSourceListener {
 
     private static int targetFps = 30; //set to screen refresh rate /2
 
@@ -41,6 +44,8 @@ public class ImagePainter implements SyncSourceListener{
     private int height;
     private Supplier<Double> fpsSource;
     private Semaphore syncSemaphore = null;
+    private BufferedImage buffer;
+    private final Object scalingMutex = new Object();
 
     public static void setFrameRate(int targetFps) {
         ImagePainter.targetFps = targetFps;
@@ -50,43 +55,51 @@ public class ImagePainter implements SyncSourceListener{
     private Optional<Scalr.Method> quality;
 
     ImagePainter(Dimension size) {
-        this.width = (int) size.getWidth();
-        this.height = (int) size.getHeight();
+        setSize(size);
     }
 
     public double getFps() {
         return paintTimer.getRate();
     }
 
+    private void delay(int micros) {
+        try {
+            Thread.sleep(0, micros * 1000);
+        } catch (InterruptedException ex) {
+        }
+    }
+
     public void setup(ScaledSource source, Supplier<Double> fpsSource, Optional<Scalr.Method> quality, Runnable callback) {
         this.fpsSource = fpsSource;
         this.paintTimer = new LoopingThread(() -> {
-            try {
-            if (syncSemaphore != null) {
-                syncSemaphore.acquire();
+            boolean ready = false;
+            while (!ready) {
+                if (syncSemaphore != null) {
+                    ready = syncSemaphore.tryAcquire();
+                } else {
+                    ready = true;
+                }
+                if (!ready) {
+                    delay(1);
+                }
             }
             if (callback != null) {
                 callback.run();
             }
-            } catch (InterruptedException e) {
-            }
         });
         this.source = source;
         if (source instanceof SyncSource) {
-            ((SyncSource)source).addListener(this);
-            syncSemaphore = new Semaphore(0);
-        } else {
-            syncSemaphore = null;
+            ((SyncSource) source).addListener(this);
         }
         this.quality = quality;
         paintTimer.start();
     }
 
     public void paint(Graphics2D g) {
-        g.setColor(Color.black);
-        g.fillRect(0, 0, width, height);
-        final Dimension size = new Dimension(width, height);
-        source.scaleInto(g, size, quality);
+        synchronized (scalingMutex) {
+            g.drawImage(buffer, 0, 0, null);
+            scalingMutex.notify();
+        }
         if (fpsSource != null) {
             String fps = String.format("FPS: %01.1f SFPS: %01.1f", paintTimer.getRate(), fpsSource.get());
             g.setColor(Color.black);
@@ -96,10 +109,14 @@ public class ImagePainter implements SyncSourceListener{
         }
     }
 
-    void setSize(Dimension size) {
+    final void setSize(Dimension size) {
         this.width = (int) size.getWidth();
         this.height = (int) size.getHeight();
-
+        if (width > 0 && height > 0) {
+            synchronized (scalingMutex) {
+                this.buffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+            }
+        }
     }
 
     @Override
@@ -113,14 +130,36 @@ public class ImagePainter implements SyncSourceListener{
     public void setSyncEnabled(boolean enableSync) {
         if (enableSync) {
             syncSemaphore = new Semaphore(0);
-        } else
+        } else {
             syncSemaphore = null;
+        }
     }
 
-    private static class LoopingThread extends Thread {
+    private class Prescaler extends Thread {
+
+        private void scale(Graphics2D g) {
+            source.scaleInto(g, new Dimension(width, height), quality);
+        }
+
+        @Override
+        public void run() {
+            try {
+                while (!interrupted()) {
+                    synchronized (scalingMutex) {
+                        scalingMutex.wait();
+                        scale(buffer.createGraphics());
+                    }
+                }
+            } catch (InterruptedException ex) {
+            }
+        }
+    }
+
+    private class LoopingThread extends Thread {
 
         private final Runnable task;
         private Queue<Long> startTimes = new ArrayDeque<>();
+        private Prescaler scaler = new Prescaler();
 
         LoopingThread(Runnable task) {
             this.task = task;
@@ -139,6 +178,7 @@ public class ImagePainter implements SyncSourceListener{
 
         @Override
         public void run() {
+            scaler.start();
             try {
                 while (true) {
                     long runStart = System.nanoTime();
@@ -161,6 +201,7 @@ public class ImagePainter implements SyncSourceListener{
                 }
             } catch (InterruptedException e) {
             }
+            scaler.interrupt();
         }
     }
 

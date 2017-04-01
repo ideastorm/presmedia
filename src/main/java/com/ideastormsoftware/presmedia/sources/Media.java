@@ -34,17 +34,16 @@ import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.interrupted;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Optional;
 import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
+import javax.sound.sampled.LineEvent;
+import javax.sound.sampled.LineListener;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import org.bytedeco.javacpp.BytePointer;
@@ -82,8 +81,6 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
     private final String sourceFile;
     private volatile BufferedImage currentImage = null;
     private final Stats fpsStats = new Stats();
-
-    private final Set<SyncSourceListener> listeners = Collections.synchronizedSet(new HashSet<SyncSourceListener>());
 
     private static void log(String format, Object... params) {
         System.out.println(String.format("%d %s - %s", System.currentTimeMillis(),
@@ -444,31 +441,13 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
         }
     }
 
-    @Override
-    public void addListener(SyncSourceListener l) {
-        l.setSyncEnabled(true);
-        listeners.add(l);
-    }
-
-    @Override
-    public void removeListener(SyncSourceListener l) {
-        listeners.remove(l);
-    }
-
-    private void notifyListeners() {
-        synchronized (listeners) {
-            for (SyncSourceListener listener : listeners) {
-                listener.frameNotify();
-            }
-        }
-    }
-
     private class VideoThread extends Thread {
 
         volatile boolean canceled = false;
         private final Stats closeMatch = new Stats();
         private final Stats fastVideo = new Stats();
         private final Stats slowVideo = new Stats();
+        private final Stats positionJump = new Stats();
 
         public VideoThread() {
             super("VideoThread");
@@ -482,6 +461,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
         public void run() {
             long lastFrame = microTime();
             Long interframe = (long) (1_000_000 / frameRate);
+            long lastMediaPosition = 0;
             try {
                 while (!canceled && !interrupted()) {
                     if (paused) {
@@ -501,15 +481,19 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
                             notifyListeners();
                             if (minimumSamples > 0) {
                                 long mediaPosition = getMediaPosition();
+                                positionJump.addValue(mediaPosition - lastMediaPosition);
+                                lastMediaPosition = mediaPosition;
                                 long delta = frame.timestamp - mediaPosition;
                                 boolean fast = frame.timestamp > mediaPosition;
                                 boolean slow = frame.timestamp + interframe < mediaPosition;
                                 if (fast) {
                                     fastVideo.addValue(delta);
                                     targetTime += delta / 2;
+                                    interframe+=10;
                                 } else if (slow) {
                                     slowVideo.addValue(delta);
                                     targetTime += delta / 4; //delta is negative here
+                                    interframe-=5;
                                 } else {
                                     closeMatch.addValue(delta);
                                 }
@@ -538,6 +522,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
                 slowVideo.report("Video running slow", 0.001);
                 closeMatch.report("A/V sync", 0.001);
                 fpsStats.report("post-processing delay", 0.001);
+                positionJump.report("Media position deltas", 0.001);
             }
         }
     }
