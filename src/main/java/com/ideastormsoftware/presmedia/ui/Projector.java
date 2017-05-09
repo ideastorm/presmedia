@@ -86,13 +86,13 @@ public class Projector extends Window {
             Dimension primaryMonitorSize = Toolkit.getDefaultToolkit().getScreenSize();
             setLocation(primaryMonitorSize.width, 0);
             setSize(currentMode.getWidth(), currentMode.getHeight());
-            ImagePainter.setFrameRate(currentMode.getRefreshRate());
+            ImagePainter.setFrameRate(currentMode.getRefreshRate()/2);
         } else {
             setLocation(0, 0);
             DisplayMode currentMode = gd[0].getDisplayMode();
             setSize(currentMode.getWidth(), currentMode.getHeight());
             this.toBack();
-            ImagePainter.setFrameRate(currentMode.getRefreshRate());
+            ImagePainter.setFrameRate(currentMode.getRefreshRate()/2);
         }
         painter.setSize(getSize());
         setAlwaysOnTop(multiMonitor);
