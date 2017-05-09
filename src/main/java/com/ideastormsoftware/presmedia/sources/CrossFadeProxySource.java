@@ -31,7 +31,7 @@ import org.imgscalr.Scalr;
 public class CrossFadeProxySource extends ScaledSource implements SyncSource {
 
     private Supplier<Optional<BufferedImage>> fadeIntoSource;
-    private static final double fadeDuration = 0.5;
+    private static final double fadeDuration = 1;
     private long fadeStartTime;
     private final Stats stats = new Stats();
     private final List<ImageOverlay> postScaleOverlays = new ArrayList<>();
@@ -108,7 +108,12 @@ public class CrossFadeProxySource extends ScaledSource implements SyncSource {
             ImageUtils.drawAspectScaled(g, img, targetSize, quality);
         }
         if (fadeIntoSource != null) {
-            Optional<BufferedImage> overlayImage = ImageUtils.copyAspectScaled(fadeIntoSource.get(), targetSize, quality);
+            Optional<BufferedImage> overlayImage;
+            if (fadeIntoSource.getClass().isAnnotationPresent(AspectAgnostic.class)) {
+                overlayImage = ImageUtils.copyScaled(fadeIntoSource.get(), targetSize, quality);    
+            } else {
+                overlayImage = ImageUtils.copyAspectScaled(fadeIntoSource.get(), targetSize, quality);
+            }
             float alpha = findAlpha();
             if (alpha >= 1) {
                 alpha = 1;

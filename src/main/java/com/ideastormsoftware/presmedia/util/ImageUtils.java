@@ -83,6 +83,17 @@ public final class ImageUtils {
         size = new Dimension(size.width > 0 ? size.width : 1, size.height > 0 ? size.height : 1);
         return new BufferedImage(size.width, size.height, BufferedImage.TYPE_INT_RGB);
     }
+    
+    public static Optional<BufferedImage> copyScaled(Optional<BufferedImage> img, Dimension size, Optional<Scalr.Method> quality)
+    {
+        if (!img.isPresent()) {
+            return Optional.empty();
+        }
+        if (size.width < 1 || size.height < 1) {
+            return Optional.empty();
+        }
+        return Optional.of(Scalr.resize(img.get(), quality.orElse(method), Scalr.Mode.FIT_EXACT, size.width, size.height));
+    }
 
     public static Optional<BufferedImage> copyAspectScaled(Optional<BufferedImage> img, Dimension size, Optional<Scalr.Method> quality) {
         if (!img.isPresent()) {
