@@ -1224,36 +1224,38 @@ public class ControlView extends javax.swing.JFrame {
         try {
             loopMedia.setEnabled(!displayMedia.isSelected());
             if (displayMedia.isSelected()) {
-                List<File> selectedMedia = mediaList.getSelectedValuesList();
-                Runnable callback = new Runnable() {
-                    int mediaIndex = 0;
+                if (activeMedia == null) {
+                    List<File> selectedMedia = mediaList.getSelectedValuesList();
+                    Runnable callback = new Runnable() {
+                        int mediaIndex = 0;
 
-                    @Override
-                    public void run() {
-                        List<File> selectedMedia = mediaList.getSelectedValuesList();
-                        try {
-                            mediaIndex++;
-                            if (mediaIndex >= selectedMedia.size()) {
-                                if (loopMedia.isSelected() && !selectedMedia.isEmpty()) {
-                                    mediaIndex = 0;
-                                } else {
-                                    displayMedia.setSelected(false);
-                                    updatePreview();
-                                    return;
+                        @Override
+                        public void run() {
+                            List<File> selectedMedia = mediaList.getSelectedValuesList();
+                            try {
+                                mediaIndex++;
+                                if (mediaIndex >= selectedMedia.size()) {
+                                    if (loopMedia.isSelected() && !selectedMedia.isEmpty()) {
+                                        mediaIndex = 0;
+                                    } else {
+                                        displayMedia.setSelected(false);
+                                        updatePreview();
+                                        return;
+                                    }
                                 }
+                                activeMedia = new Media(selectedMedia.get(mediaIndex).getAbsolutePath(), this);
+                                source.setSource(activeMedia);
+                            } catch (Exception ex) {
+                                activeMedia = null;
+                                ex.printStackTrace();
+                                source.setSource(backgroundSource);
                             }
-                            activeMedia = new Media(selectedMedia.get(mediaIndex).getAbsolutePath(), this);
-                            source.setSource(activeMedia);
-                        } catch (Exception ex) {
-                            activeMedia = null;
-                            ex.printStackTrace();
-                            source.setSource(backgroundSource);
                         }
+                    };
+                    if (!selectedMedia.isEmpty()) {
+                        activeMedia = new Media(selectedMedia.get(0).getAbsolutePath(), callback);
+                        source.setSource(activeMedia);
                     }
-                };
-                if (!selectedMedia.isEmpty()) {
-                    activeMedia = new Media(selectedMedia.get(0).getAbsolutePath(), callback);
-                    source.setSource(activeMedia);
                 }
             } else {
                 activeMedia = null;

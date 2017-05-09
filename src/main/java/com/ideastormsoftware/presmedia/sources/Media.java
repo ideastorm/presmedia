@@ -39,15 +39,12 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
-import javax.sound.sampled.LineEvent;
-import javax.sound.sampled.LineListener;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
+import jdk.jfr.events.ThrowablesEvent;
 import org.bytedeco.javacpp.BytePointer;
 import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_DBL;
 import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_DBLP;
@@ -103,8 +100,8 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
     }
 
     @Override
-    public void start() {
-        openSource();
+    public void start(Runnable startedCallback) throws InterruptedException {
+        openSource(startedCallback);
     }
 
     @Override
@@ -258,12 +255,13 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
 
     private GrabberThread grabber = null;
 
-    private void openSource() {
+    private void openSource(Runnable startedCallback) {
         if (grabber == null) {
             log("initializing new processing thread");
-            grabber = new GrabberThread();
+            grabber = new GrabberThread(startedCallback);
             grabber.start();
             log("processing thread %s started", grabber.getName());
+
         }
     }
 
@@ -320,8 +318,11 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
 
     private class GrabberThread extends Thread {
 
-        public GrabberThread() {
+        private final Runnable startedCallback;
+
+        public GrabberThread(Runnable startedCallback) {
             super("FrameGrabThread");
+            this.startedCallback = startedCallback;
         }
 
         private volatile boolean canceled = false;
@@ -386,6 +387,9 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
                                         audioThread.start();
                                         videoThread.start();
                                         started = true;
+                                        if (startedCallback != null) {
+                                            startedCallback.run();
+                                        }
                                     }
                                 } catch (Exception e) {
                                     e.printStackTrace();

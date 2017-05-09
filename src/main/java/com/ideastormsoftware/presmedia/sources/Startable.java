@@ -20,5 +20,5 @@ package com.ideastormsoftware.presmedia.sources;
  * @author Phillip Hayward <phil@pjhayward.net>
  */
 interface Startable {
-    public void start();
+    public void start(Runnable startedCallback) throws InterruptedException;
 }

@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.imgscalr.Scalr;
 
 public class CrossFadeProxySource extends ScaledSource implements SyncSource {
@@ -51,32 +53,29 @@ public class CrossFadeProxySource extends ScaledSource implements SyncSource {
     @Override
     public CrossFadeProxySource setSource(Supplier<Optional<BufferedImage>> source) {
         stats.reset();
+        log("Starting fade");
         if (source instanceof Startable) {
-            ((Startable) source).start();
+            try {
+                ((Startable) source).start(() -> {
+                    setFadeSourceInternal(source);
+                });
+            } catch (InterruptedException ex) {
+
+            }
+        } else {
+            setFadeSourceInternal(source);
         }
+        return this;
+    }
+
+    private void setFadeSourceInternal(Supplier<Optional<BufferedImage>> source) {
         if (fadeIntoSource != null) {
             if (getSource() instanceof CleanCloseable) {
                 ((CleanCloseable) getSource()).close();
             }
             super.setSource(fadeIntoSource);
         }
-        setFadeSourceInternal(source);
-        return this;
-    }
 
-    public CrossFadeProxySource setSourceNoFade(Supplier<Optional<BufferedImage>> source) {
-        if (source instanceof Startable) {
-            ((Startable) source).start();
-        }
-        if (getSource() instanceof CleanCloseable) {
-            ((CleanCloseable) getSource()).close();
-        }
-        super.setSource(source);
-        fadeIntoSource = null;
-        return this;
-    }
-
-    private void setFadeSourceInternal(Supplier<Optional<BufferedImage>> source) {
         fadeIntoSource = source;
         fadeStartTime = System.nanoTime();
     }
@@ -102,7 +101,7 @@ public class CrossFadeProxySource extends ScaledSource implements SyncSource {
         if (fadeIntoSource != null) {
             Optional<BufferedImage> overlayImage;
             if (fadeIntoSource.getClass().isAnnotationPresent(AspectAgnostic.class)) {
-                overlayImage = ImageUtils.copyScaled(fadeIntoSource.get(), targetSize, quality);    
+                overlayImage = ImageUtils.copyScaled(fadeIntoSource.get(), targetSize, quality);
             } else {
                 overlayImage = ImageUtils.copyAspectScaled(fadeIntoSource.get(), targetSize, quality);
             }
@@ -112,6 +111,7 @@ public class CrossFadeProxySource extends ScaledSource implements SyncSource {
                 if (getSource() instanceof CleanCloseable) {
                     ((CleanCloseable) getSource()).close();
                 }
+                log("Finalizing fade");
                 super.setSource(fadeIntoSource);
                 fadeIntoSource = null;
             }
