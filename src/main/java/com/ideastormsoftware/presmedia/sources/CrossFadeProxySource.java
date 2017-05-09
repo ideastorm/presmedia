@@ -26,17 +26,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.imgscalr.Scalr;
 
-public class CrossFadeProxySource extends ScaledSource implements SyncSource {
+public class CrossFadeProxySource extends ScaledSource {
 
     private Supplier<Optional<BufferedImage>> fadeIntoSource;
     private static final double FADE_DURATION = 1;
     private long fadeStartTime;
     private final Stats stats = new Stats();
     private final List<ImageOverlay> postScaleOverlays = new ArrayList<>();
+    private final Object fadeSourceMutex = new Object();
 
     public void appendOverlay(ImageOverlay overlay) {
         synchronized (postScaleOverlays) {
@@ -56,28 +55,64 @@ public class CrossFadeProxySource extends ScaledSource implements SyncSource {
         log("Starting fade");
         if (source instanceof Startable) {
             try {
+                log("starting source");
                 ((Startable) source).start(() -> {
+                    log("source started, starting fade");
                     setFadeSourceInternal(source);
                 });
             } catch (InterruptedException ex) {
-
+                ex.printStackTrace();
             }
         } else {
+            log("non-startable source, starting fade");
             setFadeSourceInternal(source);
         }
         return this;
     }
 
-    private void setFadeSourceInternal(Supplier<Optional<BufferedImage>> source) {
-        if (fadeIntoSource != null) {
-            if (getSource() instanceof CleanCloseable) {
-                ((CleanCloseable) getSource()).close();
-            }
-            super.setSource(fadeIntoSource);
+    public CrossFadeProxySource setSourceNoFade(Supplier<Optional<BufferedImage>> source) {
+        stats.reset();
+        synchronized (fadeSourceMutex) {
+            fadeIntoSource = null;
+        }
+        if (getSource() instanceof CleanCloseable) {
+            log("Closing existing closeable source");
+            ((CleanCloseable) getSource()).close();
         }
 
-        fadeIntoSource = source;
-        fadeStartTime = System.nanoTime();
+        if (source instanceof Startable) {
+            try {
+                log("starting source");
+                ((Startable) source).start(() -> {
+                    log("source started, setting base source");
+                    super.setSource(source);
+                });
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        } else {
+            log("non-startable source, setting source");
+            super.setSource(source);
+        }
+        return this;
+    }
+
+    private void setFadeSourceInternal(Supplier<Optional<BufferedImage>> source) {
+        synchronized (fadeSourceMutex) {
+            if (fadeIntoSource != null) {
+                log("fade source already exists");
+                if (getSource() instanceof CleanCloseable) {
+                    log("Closing existing closeable source");
+                    ((CleanCloseable) getSource()).close();
+                }
+                log("Setting fade source as base source");
+                super.setSource(fadeIntoSource);
+            }
+            log("setting fade source");
+            fadeIntoSource = source;
+            fadeStartTime = System.nanoTime();
+            log("fade source set, fade start time set");
+        }
     }
 
     private float findAlpha() {
@@ -98,25 +133,30 @@ public class CrossFadeProxySource extends ScaledSource implements SyncSource {
         } else {
             ImageUtils.drawAspectScaled(g, img, targetSize, quality);
         }
-        if (fadeIntoSource != null) {
-            Optional<BufferedImage> overlayImage;
-            if (fadeIntoSource.getClass().isAnnotationPresent(AspectAgnostic.class)) {
-                overlayImage = ImageUtils.copyScaled(fadeIntoSource.get(), targetSize, quality);
-            } else {
-                overlayImage = ImageUtils.copyAspectScaled(fadeIntoSource.get(), targetSize, quality);
-            }
-            float alpha = findAlpha();
-            if (alpha >= 1) {
-                alpha = 1;
-                if (getSource() instanceof CleanCloseable) {
-                    ((CleanCloseable) getSource()).close();
+        synchronized (fadeSourceMutex) {
+            if (fadeIntoSource != null) {
+                Optional<BufferedImage> overlayImage;
+                if (fadeIntoSource.getClass().isAnnotationPresent(AspectAgnostic.class)) {
+                    overlayImage = ImageUtils.copyScaled(fadeIntoSource.get(), targetSize, quality);
+                } else {
+                    overlayImage = ImageUtils.copyAspectScaled(fadeIntoSource.get(), targetSize, quality);
                 }
-                log("Finalizing fade");
-                super.setSource(fadeIntoSource);
-                fadeIntoSource = null;
+                float alpha = findAlpha();
+                if (alpha >= 1) {
+                    alpha = 1;
+                    if (getSource() instanceof CleanCloseable) {
+                        log("closing old base source");
+                        ((CleanCloseable) getSource()).close();
+                    }
+                    log("Finalizing fade");
+                    super.setSource(fadeIntoSource);
+                    fadeIntoSource = null;
+                } else {
+                    log("Fading using alpha " + alpha);
+                }
+                g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+                ImageUtils.drawAspectScaled(g, overlayImage, targetSize, quality);
             }
-            g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-            ImageUtils.drawAspectScaled(g, overlayImage, targetSize, quality);
         }
         for (ImageOverlay overlay : postScaleOverlays) {
             overlay.apply(g, targetSize);

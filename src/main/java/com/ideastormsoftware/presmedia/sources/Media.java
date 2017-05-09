@@ -29,7 +29,7 @@ import com.ideastormsoftware.presmedia.sources.media.PlanarIntConverter;
 import com.ideastormsoftware.presmedia.sources.media.InterleavedIntConverter;
 import com.ideastormsoftware.presmedia.sources.media.AudioConverter;
 import com.ideastormsoftware.presmedia.sources.media.PlanarShortConverter;
-import com.ideastormsoftware.presmedia.util.ImageUtils;
+import com.ideastormsoftware.presmedia.util.FrameCoordinator;
 import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
 import static java.lang.Thread.currentThread;
@@ -44,7 +44,6 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
-import jdk.jfr.events.ThrowablesEvent;
 import org.bytedeco.javacpp.BytePointer;
 import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_DBL;
 import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_DBLP;
@@ -59,7 +58,7 @@ import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_U8;
 import static org.bytedeco.javacpp.avutil.AV_SAMPLE_FMT_U8P;
 import static org.bytedeco.javacpp.avutil.av_get_sample_fmt_name;
 
-public class Media implements ImageSource, CleanCloseable, Startable, Pauseable, SyncSource {
+public class Media implements ImageSource, CleanCloseable, Startable, Pauseable {
 
     private SourceDataLine mLine;
     private AudioConverter converter;
@@ -276,9 +275,6 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
             e.printStackTrace();
         } finally {
             grabber = null;
-            frames.clear();
-            samples.clear();
-            imageBuffer.clear();
             currentImage = null;
         }
     }
@@ -291,7 +287,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
 
     @Override
     public double getFps() {
-        return fpsStats.getRate();
+        return frameRate;
     }
 
     public long getVideoPosition() {
@@ -410,6 +406,9 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
                 }
             } finally {
                 log("exited thread lock - ready to go with the next thread");
+                frames.clear();
+                samples.clear();
+                imageBuffer.clear();
                 if (normalExit) {
                     callback.run();
                 }
@@ -468,7 +467,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
                                 imageBuffer.offer(currentImage); //recycle it!
                             }
                             currentImage = image;
-                            notifyListeners();
+                            FrameCoordinator.notify(Media.this);
                             if (minimumSamples > 0) {
                                 long mediaPosition = getMediaPosition();
                                 positionJump.addValue(mediaPosition - lastMediaPosition);
@@ -560,6 +559,9 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
                     }
                 }
             } catch (InterruptedException e) {
+            } finally {
+                if (updateThread != null)
+                    updateThread.interrupt();
             }
         }
     }

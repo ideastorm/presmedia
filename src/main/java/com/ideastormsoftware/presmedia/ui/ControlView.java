@@ -11,6 +11,7 @@ import com.ideastormsoftware.presmedia.sources.ImageSource;
 import com.ideastormsoftware.presmedia.sources.Media;
 import com.ideastormsoftware.presmedia.sources.media.AvException;
 import com.ideastormsoftware.presmedia.util.DisplayFile;
+import com.ideastormsoftware.presmedia.util.FrameCoordinator;
 import com.ideastormsoftware.presmedia.util.RollingAverage;
 import java.awt.Color;
 import java.awt.datatransfer.DataFlavor;
@@ -30,6 +31,7 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.lang.management.MemoryUsage;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -48,13 +50,14 @@ import javax.swing.border.LineBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.FrameGrabber;
+import org.hyperic.sigar.Mem;
 import org.hyperic.sigar.Sigar;
 import org.imgscalr.Scalr;
 
 public class ControlView extends javax.swing.JFrame {
-
+    
     static {
-
+        
         try {
             FFmpegFrameGrabber.tryLoad();
         } catch (FrameGrabber.Exception ex) {
@@ -62,7 +65,7 @@ public class ControlView extends javax.swing.JFrame {
             ex.printStackTrace();
         }
     }
-
+    
     private Supplier<Optional<BufferedImage>> backgroundSource = new ColorSource(Color.black);
     private Color backgroundColor = Color.black;
     private final CrossFadeProxySource source;
@@ -80,6 +83,7 @@ public class ControlView extends javax.swing.JFrame {
     private Sigar sigar = new Sigar();
     private RollingAverage cpuAvg = new RollingAverage(5);
     private RollingAverage memAvg = new RollingAverage(5);
+    private RollingAverage heapAvg = new RollingAverage(5);
     private final ImageSource mediaSource = new ImageSource() {
         @Override
         public double getFps() {
@@ -88,7 +92,7 @@ public class ControlView extends javax.swing.JFrame {
             }
             return 0;
         }
-
+        
         @Override
         public Optional<BufferedImage> get() {
             if (activeMedia != null) {
@@ -106,25 +110,30 @@ public class ControlView extends javax.swing.JFrame {
         source = new CrossFadeProxySource().setSource(backgroundSource);
         projector = new Projector(source);
         projector.setFrameCallback((fps) -> {
-            projectorFps.setText(String.format("Projector FPS: %01.1f", fps));
-            crossfadeFps.setText(String.format("Crossfade FPS: %01.1f", source.getFps()));
-            if (activeMedia != null) {
-                double progress = activeMedia.getMediaPosition() * 1000.0 / activeMedia.getMediaDuration();
-                mediaProgress.setValue((int) progress);
-                audioBufferFill.setValue(activeMedia.getAudioBufferLoad());
-                videoBufferFill.setValue(activeMedia.getVideoBufferLoad());
-            } else {
-                mediaProgress.setValue(0);
-                audioBufferFill.setValue(0);
-                videoBufferFill.setValue(0);
-            }
             try {
+                projectorFps.setText(String.format("Projector FPS: %01.1f", fps));
+                crossfadeFps.setText(String.format("Crossfade FPS: %01.1f", source.getFps()));
+                if (activeMedia != null) {
+                    double progress = activeMedia.getMediaPosition() * 1000.0 / activeMedia.getMediaDuration();
+                    mediaProgress.setValue((int) progress);
+                    audioBufferFill.setValue(activeMedia.getAudioBufferLoad());
+                    videoBufferFill.setValue(activeMedia.getVideoBufferLoad());
+                } else {
+                    mediaProgress.setValue(0);
+                    audioBufferFill.setValue(0);
+                    videoBufferFill.setValue(0);
+                }
                 cpuLabel.setText(String.format("CPU: %1.1f%%", cpuAvg.addValue(sigar.getCpuPerc().getCombined() * 100)));
                 cpuGraph.setValue((int) cpuAvg.get());
-                memLabel.setText(String.format("MEM: %1.1f%%", memAvg.addValue(sigar.getMem().getUsedPercent())));
+                Mem mem = sigar.getMem();
+                memLabel.setText(String.format("SysMem: %1.1f%%", memAvg.addValue(mem.getActualUsed() * 100.0 / mem.getTotal())));
                 memGraph.setValue((int) memAvg.get());
-
+                Runtime runtime = Runtime.getRuntime();
+                long used = runtime.totalMemory() - runtime.freeMemory();
+                heapLabel.setText(String.format("Heap: %1.1f%%", heapAvg.addValue(used * 100.0 / runtime.maxMemory())));
+                heapGraph.setValue((int) heapAvg.get());
             } catch (Throwable ex) {
+                ex.printStackTrace();
             }
         });
         RenderPane controlPreview = new RenderPane(source, source::getFps);
@@ -137,7 +146,7 @@ public class ControlView extends javax.swing.JFrame {
         mediaList.setTransferHandler(new FileListHandler(mediaListModel));
         mediaList.setDropMode(DropMode.INSERT);
         mediaList.setDragEnabled(true);
-
+        
         lyricsListModel = new DefaultListModel<>();
         songList.setModel(lyricsListModel);
         slideListModel = new DefaultListModel<>();
@@ -145,7 +154,7 @@ public class ControlView extends javax.swing.JFrame {
         nameListModel = new DefaultListModel<>();
         nameList.setModel(nameListModel);
     }
-
+    
     @Override
     public void setVisible(boolean visible) {
         super.setVisible(visible);
@@ -217,6 +226,8 @@ public class ControlView extends javax.swing.JFrame {
         cpuGraph = new javax.swing.JProgressBar();
         memLabel = new javax.swing.JLabel();
         memGraph = new javax.swing.JProgressBar();
+        heapLabel = new javax.swing.JLabel();
+        heapGraph = new javax.swing.JProgressBar();
         jLabel2 = new javax.swing.JLabel();
         jPanel4 = new javax.swing.JPanel();
         mediaPreviewContainer = new javax.swing.JPanel();
@@ -561,6 +572,8 @@ public class ControlView extends javax.swing.JFrame {
 
         memLabel.setText("Memory");
 
+        heapLabel.setText("Heap");
+
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(
@@ -581,12 +594,18 @@ public class ControlView extends javax.swing.JFrame {
                         .addComponent(crossfadeFps)
                         .addGap(0, 0, Short.MAX_VALUE))
                     .addGroup(jPanel3Layout.createSequentialGroup()
-                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addComponent(memLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(cpuLabel, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(jLabel10, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                        .addGap(29, 29, 29)
                         .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel3Layout.createSequentialGroup()
+                                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                    .addComponent(memLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                    .addComponent(cpuLabel, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                    .addComponent(jLabel10, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addGap(29, 29, 29))
+                            .addGroup(jPanel3Layout.createSequentialGroup()
+                                .addComponent(heapLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addGap(40, 40, 40)))
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(heapGraph, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(videoBufferFill, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(cpuGraph, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(memGraph, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
@@ -620,7 +639,11 @@ public class ControlView extends javax.swing.JFrame {
                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(memLabel)
                     .addComponent(memGraph, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(156, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(heapLabel)
+                    .addComponent(heapGraph, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(136, Short.MAX_VALUE))
         );
 
         jLabel2.setText("Output Preview");
@@ -1141,6 +1164,9 @@ public class ControlView extends javax.swing.JFrame {
 
         //</editor-fold>
         //</editor-fold>
+        Thread.setDefaultUncaughtExceptionHandler((Thread t, Throwable e) -> {
+            e.printStackTrace();
+        });
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
@@ -1149,7 +1175,7 @@ public class ControlView extends javax.swing.JFrame {
             }
         });
     }
-
+    
     private void warn(String message, Throwable exception) {
         JOptionPane.showMessageDialog(rootPane, message + exception.getMessage(), "Warning", JOptionPane.WARNING_MESSAGE);
     }
@@ -1173,6 +1199,8 @@ public class ControlView extends javax.swing.JFrame {
     private javax.swing.JButton editName;
     private javax.swing.JButton editSlideshow;
     private javax.swing.JButton editSong;
+    private javax.swing.JProgressBar heapGraph;
+    private javax.swing.JLabel heapLabel;
     private javax.swing.JButton imageBgSelector;
     private javax.swing.JPanel inputPreviews;
     private javax.swing.JLabel jLabel1;
@@ -1221,6 +1249,7 @@ public class ControlView extends javax.swing.JFrame {
     // End of variables declaration//GEN-END:variables
 
     private void updatePreview() {
+        FrameCoordinator.setActiveSource(null);
         try {
             loopMedia.setEnabled(!displayMedia.isSelected());
             if (displayMedia.isSelected()) {
@@ -1228,7 +1257,7 @@ public class ControlView extends javax.swing.JFrame {
                     List<File> selectedMedia = mediaList.getSelectedValuesList();
                     Runnable callback = new Runnable() {
                         int mediaIndex = 0;
-
+                        
                         @Override
                         public void run() {
                             List<File> selectedMedia = mediaList.getSelectedValuesList();
@@ -1244,8 +1273,10 @@ public class ControlView extends javax.swing.JFrame {
                                     }
                                 }
                                 activeMedia = new Media(selectedMedia.get(mediaIndex).getAbsolutePath(), this);
-                                source.setSource(activeMedia);
+                                FrameCoordinator.setActiveSource(activeMedia);
+                                source.setSourceNoFade(activeMedia);
                             } catch (Exception ex) {
+                                ex.printStackTrace();
                                 activeMedia = null;
                                 ex.printStackTrace();
                                 source.setSource(backgroundSource);
@@ -1254,12 +1285,14 @@ public class ControlView extends javax.swing.JFrame {
                     };
                     if (!selectedMedia.isEmpty()) {
                         activeMedia = new Media(selectedMedia.get(0).getAbsolutePath(), callback);
+                        FrameCoordinator.setActiveSource(activeMedia);
                         source.setSource(activeMedia);
                     }
                 }
             } else {
                 activeMedia = null;
                 if (displayCamera.isSelected() && selectedCamera != null) {
+                    FrameCoordinator.setActiveSource(selectedCamera);
                     source.setSource(selectedCamera);
                 } else {
                     source.setSource(backgroundSource);

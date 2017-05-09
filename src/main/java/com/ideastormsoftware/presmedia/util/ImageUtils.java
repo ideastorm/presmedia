@@ -25,6 +25,7 @@ import java.util.Optional;
 import org.imgscalr.Scalr;
 
 public final class ImageUtils {
+    public static final Object FRAME_SYNC = new Object();
 
     private static Scalr.Method method = Scalr.Method.SPEED; //.Method.valueOf(System.getProperty("scalr.method", "BALANCED"));
 

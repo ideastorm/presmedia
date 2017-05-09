@@ -16,6 +16,7 @@
 package com.ideastormsoftware.presmedia.ui;
 
 import com.ideastormsoftware.presmedia.sources.ScaledSource;
+import com.ideastormsoftware.presmedia.util.FrameCoordinator;
 import java.awt.Dimension;
 import java.awt.DisplayMode;
 import java.awt.Graphics2D;
@@ -86,13 +87,13 @@ public class Projector extends Window {
             Dimension primaryMonitorSize = Toolkit.getDefaultToolkit().getScreenSize();
             setLocation(primaryMonitorSize.width, 0);
             setSize(currentMode.getWidth(), currentMode.getHeight());
-            ImagePainter.setFrameRate(currentMode.getRefreshRate()/2);
+            FrameCoordinator.setFrameRate(currentMode.getRefreshRate()/2);
         } else {
             setLocation(0, 0);
             DisplayMode currentMode = gd[0].getDisplayMode();
             setSize(currentMode.getWidth(), currentMode.getHeight());
             this.toBack();
-            ImagePainter.setFrameRate(currentMode.getRefreshRate()/2);
+            FrameCoordinator.setFrameRate(currentMode.getRefreshRate()/2);
         }
         painter.setSize(getSize());
         setAlwaysOnTop(multiMonitor);

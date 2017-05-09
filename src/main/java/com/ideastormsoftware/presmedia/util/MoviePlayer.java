@@ -61,7 +61,7 @@ public class MoviePlayer implements Runnable {
         Media mediaSource = new Media(movieFiles.get(index++), this);
         source.setSource(mediaSource);
         try {
-            mediaSource.start();
+            mediaSource.start(null);
         } catch (InterruptedException ex) {
         }
         new Thread(()->{
