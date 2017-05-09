@@ -127,13 +127,13 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
         return paused;
     }
 
-    public void seekTo(long position) throws AvException {
+    public void seekTo(long position) throws AvException, InterruptedException {
         if (position >= mediaDuration) {
             return;
         }
         boolean pauseState = paused;
         setPaused(true);
-        delay(50, TimeUnit.MILLISECONDS); //give time for the pause to take effect
+        TimeUnit.MILLISECONDS.sleep(50);
         ffmpeg.setTimestamp(position);
         frameQueueSize.set(0);
         if (currentImage != null) {
@@ -147,7 +147,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
         samples.clear();
         postSeekBuffer = true;
         do {
-            delay(2);
+            TimeUnit.MILLISECONDS.sleep(2);
         } while (frameQueueSize.get() < minimumFrames && sampleQueueSize.get() < minimumSamples);
         updatePausedImage();
         setMediaPosition(position);
@@ -276,6 +276,10 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
             e.printStackTrace();
         } finally {
             grabber = null;
+            frames.clear();
+            samples.clear();
+            imageBuffer.clear();
+            currentImage = null;
         }
     }
 
@@ -283,20 +287,6 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
         byte[] bytes = new byte[ptr.limit()];
         ptr.get(bytes);
         return new String(bytes);
-    }
-
-    private void delay(long number, TimeUnit units) {
-        try {
-            units.sleep(number);
-        } catch (InterruptedException ex) {
-        }
-    }
-
-    private void delay(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException ex) {
-        }
     }
 
     @Override
@@ -351,49 +341,44 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
                         }
                         while (!canceled && !interrupted()) {
                             if (paused && !postSeekBuffer) {
-                                delay(2);
+                                TimeUnit.MILLISECONDS.sleep(2);
                             } else {
-                                try {
-                                    long start = System.nanoTime();
-                                    Frame frame = ffmpeg.grabFrame();
-                                    if (frame != null) {
-                                        if (frame.samples != null) {
-                                            sampleQueueSize.incrementAndGet();
-                                            samples.offer(new DataFrame(converter.prepareSamplesForPlayback(frame.samples), frame.timestamp, frame.duration));
-                                        }
-                                        if (frame.image != null) {
-                                            if (!started && imageBuffer.isEmpty()) {
-                                                for (int i = 0; i < QUEUE_CAPACITY; i++) {
-                                                    imageBuffer.offer(new BufferedImage(frame.image.getWidth(), frame.image.getHeight(), BufferedImage.TYPE_3BYTE_BGR));
-                                                }
-                                            }
-                                            while (frameQueueSize.get() > QUEUE_CAPACITY * 0.9) //try to make sure we're not overwriting an image before it's rendered
-                                            {
-                                                delay(2);
-                                            }
-                                            while (imageBuffer.isEmpty()) {
-                                                delay(2);
-                                            }
-                                            BufferedImage image = imageBuffer.poll();
-                                            image.createGraphics().drawImage(frame.image, 0, 0, null);
-                                            frameQueueSize.incrementAndGet();
-                                            frames.offer(new DataFrame(image, frame.timestamp, frame.duration));
-                                        }
-                                    } else {
-                                        normalExit = true;
-                                        break;
+                                long start = System.nanoTime();
+                                Frame frame = ffmpeg.grabFrame();
+                                if (frame != null) {
+                                    if (frame.samples != null) {
+                                        sampleQueueSize.incrementAndGet();
+                                        samples.offer(new DataFrame(converter.prepareSamplesForPlayback(frame.samples), frame.timestamp, frame.duration));
                                     }
-                                    if (frames.size() >= minimumFrames && samples.size() >= minimumSamples && !started) {
-                                        audioThread.start();
-                                        videoThread.start();
-                                        started = true;
-                                        if (startedCallback != null) {
-                                            startedCallback.run();
+                                    if (frame.image != null) {
+                                        if (!started && imageBuffer.isEmpty()) {
+                                            for (int i = 0; i < QUEUE_CAPACITY; i++) {
+                                                imageBuffer.offer(new BufferedImage(frame.image.getWidth(), frame.image.getHeight(), BufferedImage.TYPE_3BYTE_BGR));
+                                            }
                                         }
+                                        while (frameQueueSize.get() > QUEUE_CAPACITY * 0.9) //try to make sure we're not overwriting an image before it's rendered
+                                        {
+                                            TimeUnit.MILLISECONDS.sleep(2);
+                                        }
+                                        while (imageBuffer.isEmpty()) {
+                                            TimeUnit.MILLISECONDS.sleep(2);
+                                        }
+                                        BufferedImage image = imageBuffer.poll();
+                                        image.createGraphics().drawImage(frame.image, 0, 0, null);
+                                        frameQueueSize.incrementAndGet();
+                                        frames.offer(new DataFrame(image, frame.timestamp, frame.duration));
                                     }
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                    currentImage = ImageUtils.emptyImage();
+                                } else {
+                                    normalExit = true;
+                                    break;
+                                }
+                                if (frames.size() >= minimumFrames && samples.size() >= minimumSamples && !started) {
+                                    audioThread.start();
+                                    videoThread.start();
+                                    started = true;
+                                    if (startedCallback != null) {
+                                        startedCallback.run();
+                                    }
                                 }
                             }
                         }
@@ -409,6 +394,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
                                 return;
                             }
                         }
+                    } catch (InterruptedException e) {
                     } finally {
                         audioThread.canceled = true;
                         videoThread.canceled = true;
@@ -471,7 +457,7 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
             try {
                 while (!canceled && !interrupted()) {
                     if (paused) {
-                        delay(2);
+                        TimeUnit.MILLISECONDS.sleep(2);
                     } else {
                         long frameStart = microTime();
                         DataFrame<BufferedImage> frame = frames.poll();
@@ -525,52 +511,55 @@ public class Media implements ImageSource, CleanCloseable, Startable, Pauseable,
         @Override
         public void run() {
             Thread updateThread = null;
-            while (!canceled && !interrupted()) {
-                if (paused) {
-                    if (mLine != null) {
-                        mLine.stop();
-                    }
-                    delay(2);
-                    if (updateThread != null) {
-                        updateThread.interrupt();
-                        updateThread = null;
-                    }
-                } else {
-                    if (mLine != null && !mLine.isRunning()) {
-                        mLine.start();
-                    }
-                    DataFrame<byte[]> frame = samples.poll();
-                    if (frame != null) {
-                        if (updateThread == null) {
-                            final long offset = frame.timestamp - mLine.getMicrosecondPosition();
-                            updateThread = new Thread(() -> {
-                                try {
-                                    long lastUpdate = microTime();
-                                    long lastPosition = 0;
-                                    while (!interrupted()) {
-                                        if (mLine != null) {
-                                            long readPosition = mLine.getMicrosecondPosition();
-                                            if (readPosition != lastPosition) {
-                                                lastPosition = readPosition;
-                                                lastUpdate = microTime();
-                                            }
-                                            setMediaPosition(lastPosition + offset + microTime() - lastUpdate);
-                                        }
-                                        sleep(1);
-                                    }
-                                } catch (InterruptedException e) {
-                                }
-                            });
-                            updateThread.start();
-                        }
-                        sampleQueueSize.decrementAndGet();
-                        byte[] buffer = frame.data;
-
+            try {
+                while (!canceled && !interrupted()) {
+                    if (paused) {
                         if (mLine != null) {
-                            mLine.write(buffer, 0, buffer.length);
+                            mLine.stop();
+                        }
+                        sleep(2);
+                        if (updateThread != null) {
+                            updateThread.interrupt();
+                            updateThread = null;
+                        }
+                    } else {
+                        if (mLine != null && !mLine.isRunning()) {
+                            mLine.start();
+                        }
+                        DataFrame<byte[]> frame = samples.poll();
+                        if (frame != null) {
+                            if (updateThread == null) {
+                                final long offset = frame.timestamp - mLine.getMicrosecondPosition();
+                                updateThread = new Thread(() -> {
+                                    try {
+                                        long lastUpdate = microTime();
+                                        long lastPosition = 0;
+                                        while (!interrupted()) {
+                                            if (mLine != null) {
+                                                long readPosition = mLine.getMicrosecondPosition();
+                                                if (readPosition != lastPosition) {
+                                                    lastPosition = readPosition;
+                                                    lastUpdate = microTime();
+                                                }
+                                                setMediaPosition(lastPosition + offset + microTime() - lastUpdate);
+                                            }
+                                            sleep(1);
+                                        }
+                                    } catch (InterruptedException e) {
+                                    }
+                                });
+                                updateThread.start();
+                            }
+                            sampleQueueSize.decrementAndGet();
+                            byte[] buffer = frame.data;
+
+                            if (mLine != null) {
+                                mLine.write(buffer, 0, buffer.length);
+                            }
                         }
                     }
                 }
+            } catch (InterruptedException e) {
             }
         }
     }

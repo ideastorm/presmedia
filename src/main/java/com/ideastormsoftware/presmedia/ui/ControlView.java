@@ -1039,7 +1039,7 @@ public class ControlView extends javax.swing.JFrame {
                 double percent = evt.getX() * 1.0 / mediaProgress.getWidth();
                 long target = (long) (activeMedia.getMediaDuration() * percent);
                 activeMedia.seekTo(target);
-            } catch (AvException ex) {
+            } catch (AvException | InterruptedException ex) {
                 warn("Unable to seek within media", ex);
             }
         }
@@ -1065,7 +1065,7 @@ public class ControlView extends javax.swing.JFrame {
                     target = 0;
                 }
                 activeMedia.seekTo(target);
-            } catch (AvException ex) {
+            } catch (AvException | InterruptedException ex) {
                 warn("Unable to seek within media", ex);
             }
         }
@@ -1080,7 +1080,7 @@ public class ControlView extends javax.swing.JFrame {
                     target = activeMedia.getMediaDuration();
                 }
                 activeMedia.seekTo(target);
-            } catch (AvException ex) {
+            } catch (AvException | InterruptedException ex) {
                 warn("Unable to seek within media", ex);
             }
         }
