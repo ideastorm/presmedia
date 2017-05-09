@@ -31,12 +31,10 @@ import org.imgscalr.Scalr;
 public class CrossFadeProxySource extends ScaledSource implements SyncSource {
 
     private Supplier<Optional<BufferedImage>> fadeIntoSource;
-    private static final double fadeDuration = 1;
+    private static final double FADE_DURATION = 1;
     private long fadeStartTime;
     private final Stats stats = new Stats();
     private final List<ImageOverlay> postScaleOverlays = new ArrayList<>();
-    private Optional<BufferedImage> lastImage = Optional.empty();
-    private final Stats duplicates = new Stats();
 
     public void appendOverlay(ImageOverlay overlay) {
         synchronized (postScaleOverlays) {
@@ -52,8 +50,6 @@ public class CrossFadeProxySource extends ScaledSource implements SyncSource {
 
     @Override
     public CrossFadeProxySource setSource(Supplier<Optional<BufferedImage>> source) {
-        reportDuplicates();
-        duplicates.reset();
         stats.reset();
         if (source instanceof Startable) {
             ((Startable) source).start();
@@ -88,7 +84,7 @@ public class CrossFadeProxySource extends ScaledSource implements SyncSource {
     private float findAlpha() {
         long currentStepTime = System.nanoTime();
         double fadeProgress = (currentStepTime - fadeStartTime) / 1_000_000_000.0;
-        return (float) (fadeProgress / fadeDuration);
+        return (float) (fadeProgress / FADE_DURATION);
     }
 
     private void log(String message) {
@@ -97,10 +93,6 @@ public class CrossFadeProxySource extends ScaledSource implements SyncSource {
 
     @Override
     protected void drawScaled(Graphics2D g, Optional<BufferedImage> img, Dimension targetSize, Optional<Scalr.Method> quality) {
-        if (img == lastImage) {
-            duplicates.addValue(1);
-        }
-        lastImage = img;
         long startTime = System.nanoTime();
         if (getSource().getClass().isAnnotationPresent(AspectAgnostic.class)) {
             ImageUtils.drawIgnoringAspect(g, img, targetSize, quality);
@@ -134,9 +126,5 @@ public class CrossFadeProxySource extends ScaledSource implements SyncSource {
 
     public double getFps() {
         return stats.getRate();
-    }
-
-    public void reportDuplicates() {
-        duplicates.report("Duplicate frames entering cross fade proxy");
     }
 }
